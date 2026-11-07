@@ -101,6 +101,7 @@ table.xl td.dtl{padding-left:6px}
 td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 .fold-head{cursor:pointer;user-select:none}.fold-head .fold-mk{font-size:.8em;color:var(--mut)}.fold-closed>.fold-item{display:none!important}.fold-head .rec-badge{margin:0 0 0 8px;vertical-align:middle;font-size:12px}
 .rec-badge{display:none;margin:4px 0 2px;padding:1px 9px;border:1.5px solid #f4b183;border-radius:10px;background:#fff2cc;color:#c55a11;font-size:12px;font-weight:700}.rec-badge.bad{border-color:#e88aa8;background:#fde4ec;color:#c00000}
+.chg-badge{display:none;margin-left:6px;padding:1px 10px;border-radius:10px;font-size:12px;font-weight:700;vertical-align:middle}.chg-badge.new{display:inline-block;background:#c00000;color:#fff;border:1.5px solid #c00000}.chg-badge.none{display:inline-block;background:#e7e6e6;color:#333;border:1.5px solid #a6a6a6}
 </style>
 </head>
 <body>
@@ -656,10 +657,10 @@ const PFIELDS=[['region','부서(권역)',['부서'],0],['person','담당자',['
 const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null,out2:[],hash2:''};
 (function(){
   const el=document.getElementById('pane-price');
-  el.innerHTML=`<div class="card"><h2 data-fold="closed">0. 단가인상 관리시트 (내장) <span class="hint" id="pb-info" style="margin:0"></span></h2>
+  el.innerHTML=`<div class="card"><h2 data-fold="closed">0. 단가인상 관리시트 (내장) <span class="hint" id="pb-info" style="margin:0"></span><span class="chg-badge" id="pb-chg"></span></h2>
   <textarea id="pb-src" placeholder="단가인상 관리시트를 머리글(팀/권역 · 팀/지점 · 담당자 · 패드구분 · 코드 · 계약처명 … 26년 단가인상 실적)부터 끝까지 붙여넣기 → 내장 자료에 없던 코드는 맨 왼쪽에 '신규'로 표시하고 자동 추가, 있던 코드는 붙인 값으로 갱신"></textarea>
   <div class="hint" id="pb-src-stat"></div>
-  <div class="row" style="margin-top:6px;align-items:center"><button class="sec xs" id="pb-file" type="button" title="지금 내장 자료(신규 추가 포함)를 암호화한 파일 저장 → 보내 주면 html에 넣어 모든 사람에게 반영">암호화 파일 만들기</button><span class="hint" id="pb-file-st" style="margin:0"></span></div></div>
+  <div class="row" style="margin-top:6px;align-items:center"><button class="xs" id="pb-copy" type="button" title="지금 자료(신규 추가 포함)를 암호문으로 복사 → 채팅에 붙여 보내면 html 내장에 반영">내장 반영용 암호문 복사</button><button class="sec xs" id="pb-file" type="button" title="지금 내장 자료(신규 추가 포함)를 암호화한 파일 저장 → 보내 주면 html에 넣어 모든 사람에게 반영">암호화 파일 만들기</button><span class="hint" id="pb-file-st" style="margin:0"></span></div></div>
   <div class="grid"><div class="card"><h2>1. 단가인상 결재 리스트 붙여넣기 <span class="hint" style="margin:0">(완료)</span></h2>
   <textarea id="pr-src" placeholder="단가인상 결재 리스트(부서, 담당자, 항목, 코드, 계약처명 … 계약특이사항 …)를 헤더 포함해서 붙여넣기"></textarea>
   <div class="row" style="margin-top:8px"><button id="pr-run">자동 작성</button>
@@ -1718,9 +1719,14 @@ function pbMerge(raw){const st=document.getElementById('pb-src-stat');const P=pb
     for(let i=0;i<W;i++){const k=key(P.hdr,i);let j=-1;if(k.replace(/\|/g,''))for(let q=0;q<Math.max(...oh.map(r=>r.length));q++)if(key(oh,q)===k){j=q;break}map.push(j)}PB.rows.forEach(r=>{r.c=map.map(j=>j>=0?r.c[j]||'':'')})}
   PB.hdr=P.hdr;PB.cols=P.cols;PB._idx={};PB.rows.forEach(r=>{r.isNew=false;PB._idx[pbCode(r)]=r});let upd=0,add=0;
   P.data.forEach(c=>{const code=String(c[P.cols[4]]).trim();const r=PB._idx[code];if(r){if(r.c.join('\t')!==c.join('\t')){r.c=c;upd++}}else{const nr={c,isNew:!first,added:ds};PB.rows.push(nr);PB._idx[code]=nr;add++}});
-  PB.date=ds;pbSave();pbInfo();pbRender();if(PR.out)prRender();
+  PB.date=ds;pbSave();pbInfo();pbRender();if(PR.out)prRender();pbChgBadge(first?null:add,upd);
   st.textContent=first?'내장 자료로 저장: '+P.data.length+'업체 (이 브라우저)':'반영: 붙인 '+P.data.length+'업체 · 갱신 '+upd+' · 신규 '+add+' (맨 왼쪽 신규 표시) → 총 '+PB.rows.length+'업체, 이 브라우저에 저장'}
-document.getElementById('pb-src').addEventListener('input',()=>{const v=document.getElementById('pb-src').value;if(!v.trim()||v===PB_HASH)return;PB_HASH=v;clearTimeout(window.__pbm);window.__pbm=setTimeout(()=>pbMerge(v),300)});
+function pbChgBadge(add,upd){const b=document.getElementById('pb-chg');if(add==null){b.className='chg-badge';b.textContent='';return}if(add){b.className='chg-badge new';b.textContent='신규 '+add.toLocaleString()+'건 추가'+(upd?' · 갱신 '+upd+'건':'')}else{b.className='chg-badge none';b.textContent=upd?'신규 없음 · 갱신 '+upd+'건':'변동 없음'}}
+async function pbEnc(){const pw=lsGet(TG_PWK);if(!PB.rows.length)throw '내장할 관리시트가 없습니다';if(!pw)throw '먼저 첫 화면 암호를 넣으세요';return 'KPPENC1|'+PB.date+'|'+PB.rows.length+'|'+await encText(pbPack(),pw)}
+document.getElementById('pb-copy').onclick=async()=>{const st=document.getElementById('pb-file-st');st.textContent='암호화 중…';let body;try{body=await pbEnc()}catch(e){st.textContent=String(e);return}
+  let ok=false;try{await navigator.clipboard.writeText(body);ok=true}catch(e){const ta=document.createElement('textarea');ta.value=body;document.body.appendChild(ta);ta.select();try{ok=document.execCommand('copy')}catch(_){}ta.remove()}
+  st.textContent=ok?'복사됨 ('+PB.rows.length.toLocaleString()+'업체, '+Math.round(body.length/1024)+'KB) → Claude 채팅에 붙여넣고 "단가인상 내장"이라고 보내 주세요':'복사 실패: [암호화 파일 만들기]로 파일을 저장해 내용을 보내 주세요'};
+document.getElementById('pb-src').addEventListener('input',()=>{const v=document.getElementById('pb-src').value;if(!v.trim()){pbChgBadge(null);return}if(v===PB_HASH)return;PB_HASH=v;clearTimeout(window.__pbm);window.__pbm=setTimeout(()=>pbMerge(v),300)});
 document.getElementById('pb-file').onclick=async()=>{const st=document.getElementById('pb-file-st'),pw=lsGet(TG_PWK);if(!PB.rows.length){st.textContent='내장할 관리시트가 없습니다';return}if(!pw){st.textContent='먼저 첫 화면 암호를 넣으세요';return}st.textContent='암호화 중…';
   const body='KPPENC1|'+PB.date+'|'+PB.rows.length+'|'+await encText(pbPack(),pw);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([body],{type:'text/plain'}));a.download='단가인상관리시트_암호화_'+PB.date.replace(/-/g,'')+'.txt';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
   st.textContent='저장: '+a.download+' ('+Math.round(body.length/1024)+'KB) · 이 파일 내용을 보내 주면 html에 넣어 모두에게 반영'};
@@ -1797,7 +1803,7 @@ document.querySelectorAll('textarea').forEach(t=>t.addEventListener('input',e=>{
   const cnt=t=>{const st=statOf(t);if(st&&/인식 실패/.test(st.textContent))return 0;/* 칸 문구가 인식 실패면 배지도 실패 */const m=st&&String(st.textContent).match(/([\d,]+)\s*(?:행|업체|건)\s*(?:인식|→)|인식\s*:?\s*([\d,]+)/);if(m)return +(m[1]||m[2]).replace(/,/g,'');
     return parseTSV(t.value).filter(r=>r.some(c=>/\d/.test(c)&&/^[\s\d,.\-\/()%원년월일:]+$/.test(String(c).trim()))).length};
   const upd=t=>{if(!t.id||!t.isConnected)return;let b=C.get(t);const st=statOf(t);const key=t.value.length+'|'+t.value.slice(0,40)+'|'+t.value.slice(-40)+'|'+(st?st.textContent:'');if(b&&b._k===key)return;
-    if(!b){b=document.createElement('span');b.className='rec-badge';const fd=fold(t);if(fd)fd.h.appendChild(b);else{b.style.marginLeft='0';(t.closest('.inbox')||t).insertAdjacentElement('afterend',b)}C.set(t,b)}const had=b._has;b._k=key;b._has=!!t.value.trim();
+    if(!b){b=document.createElement('span');b.className='rec-badge';const fd=fold(t);if(fd){const cb=fd.h.querySelector('.chg-badge');cb?fd.h.insertBefore(b,cb):fd.h.appendChild(b)}else{b.style.marginLeft='0';(t.closest('.inbox')||t).insertAdjacentElement('afterend',b)}C.set(t,b)}const had=b._has;b._k=key;b._has=!!t.value.trim();
     /* 접이식: 자료가 새로 들어오면(붙여넣기·자동 채움) 접고, 비우면 펼침 */const fd=t._fold;if(fd){if(!b._has&&had)fd.set(true);else if(b._has&&had===false&&document.activeElement!==t)fd.set(false)}
     if(!t.value.trim()){b.style.display='none';return}let n=0;try{n=cnt(t)}catch(e){}b.style.display='inline-block';b.className='rec-badge'+(n?'':' bad');b.textContent=n?'인식 '+n.toLocaleString()+'건':'인식 실패';};
   /* 접이식: 붙여넣기 칸이 든 카드의 제목(예: 경쟁사 실적관리)을 누르면 접고 펼침. 접으면 초기화·붙여넣기 칸·안내 문구만 숨기고 작성 버튼 줄과 표는 그대로. 제목 옆에 인식 배지 */
