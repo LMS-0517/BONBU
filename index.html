@@ -99,7 +99,7 @@ table.xl td.dtl{padding-left:6px}
 #merge-out{overflow:visible}/* 참고내용(청구년월~)은 카드 밖으로 그대로 보이게 */#merge-out table.mgd{table-layout:fixed;font-size:9pt}#merge-out table.mgd td{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;padding:1px 3px}/* 상세표: 너비 안에 다 들어가게 */
 .zoom{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:#bbb;font-weight:400}.zoom button{background:#333;color:#fff;border:1px solid #555;border-radius:5px;padding:2px 9px;font-size:13px;line-height:1.2}.zoom b{color:#fff;min-width:44px;text-align:center}header{display:flex;align-items:center;flex-wrap:wrap}
 td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
-details.ta-fold{margin:2px 0}details.ta-fold>summary{cursor:pointer;font-size:12px;color:var(--navy);padding:2px 0;list-style:revert}details.ta-fold>summary .fold-hint{color:var(--mut);font-weight:400}details.ta-fold>summary .rec-badge{margin:0 0 0 6px}
+.fold-head{cursor:pointer;user-select:none}.fold-head .fold-mk{font-size:.8em;color:var(--mut)}.fold-closed>.fold-item{display:none!important}.fold-head .rec-badge{margin:0 0 0 8px;vertical-align:middle;font-size:12px}
 .rec-badge{display:none;margin:4px 0 2px;padding:1px 9px;border:1.5px solid #f4b183;border-radius:10px;background:#fff2cc;color:#c55a11;font-size:12px;font-weight:700}.rec-badge.bad{border-color:#e88aa8;background:#fde4ec;color:#c00000}
 </style>
 </head>
@@ -1683,14 +1683,19 @@ document.querySelectorAll('textarea').forEach(t=>t.addEventListener('input',e=>{
   const cnt=t=>{const st=statOf(t);if(st&&/인식 실패/.test(st.textContent))return 0;/* 칸 문구가 인식 실패면 배지도 실패 */const m=st&&String(st.textContent).match(/([\d,]+)\s*(?:행|업체|건)\s*(?:인식|→)|인식\s*:?\s*([\d,]+)/);if(m)return +(m[1]||m[2]).replace(/,/g,'');
     return parseTSV(t.value).filter(r=>r.some(c=>/\d/.test(c)&&/^[\s\d,.\-\/()%원년월일:]+$/.test(String(c).trim()))).length};
   const upd=t=>{if(!t.id||!t.isConnected)return;let b=C.get(t);const st=statOf(t);const key=t.value.length+'|'+t.value.slice(0,40)+'|'+t.value.slice(-40)+'|'+(st?st.textContent:'');if(b&&b._k===key)return;
-    if(!b){b=document.createElement('span');b.className='rec-badge';const fd=fold(t);fd.querySelector('summary').appendChild(b);C.set(t,b)}const had=b._has;b._k=key;b._has=!!t.value.trim();
-    /* 접이식: 자료가 새로 들어오면(붙여넣기·자동 채움) 접고, 비우면 펼침 */const fd=t.closest('details.ta-fold');if(fd){if(!b._has&&had)fd.open=true;else if(b._has&&had===false&&document.activeElement!==t)fd.open=false}
+    if(!b){b=document.createElement('span');b.className='rec-badge';const fd=fold(t);if(fd)fd.h.appendChild(b);else{b.style.marginLeft='0';(t.closest('.inbox')||t).insertAdjacentElement('afterend',b)}C.set(t,b)}const had=b._has;b._k=key;b._has=!!t.value.trim();
+    /* 접이식: 자료가 새로 들어오면(붙여넣기·자동 채움) 접고, 비우면 펼침 */const fd=t._fold;if(fd){if(!b._has&&had)fd.set(true);else if(b._has&&had===false&&document.activeElement!==t)fd.set(false)}
     if(!t.value.trim()){b.style.display='none';return}let n=0;try{n=cnt(t)}catch(e){}b.style.display='inline-block';b.className='rec-badge'+(n?'':' bad');b.textContent=n?'인식 '+n.toLocaleString()+'건':'인식 실패';};
-  /* 붙여넣기 칸을 접이식으로: 칸(안내 그림 포함)을 details로 감싸고 제목줄에 인식 배지 */
-  function fold(t){let fd=t.closest('details.ta-fold');if(fd)return fd;const box=t.closest('.inbox')||t;fd=document.createElement('details');fd.className='ta-fold';fd.open=!t.value.trim();
-    fd.innerHTML='<summary>붙여넣기 칸 <span class="fold-hint"></span></summary>';box.parentNode.insertBefore(fd,box);fd.appendChild(box);
-    const hint=()=>{fd.querySelector('.fold-hint').textContent=fd.open?'(접기)':'(펼치기)'};hint();fd.addEventListener('toggle',()=>{hint();if(fd.open)t.dispatchEvent(new Event('change'))});
-    t.addEventListener('paste',()=>setTimeout(()=>{if(t.value.trim()){fd.open=false;t.blur()}},50));return fd}
+  /* 접이식: 붙여넣기 칸이 든 카드의 제목(예: 경쟁사 실적관리)을 누르면 접고 펼침. 접으면 초기화·붙여넣기 칸·안내 문구만 숨기고 작성 버튼 줄과 표는 그대로. 제목 옆에 인식 배지 */
+  function fold(t){if(t._fold!==undefined)return t._fold;const box=t.closest('.inbox')||t;let h=null,par=null;
+    for(let el=box;el&&el!==document.body&&!h;el=el.parentElement){if(el.tagName==='DETAILS'||el.classList.contains('card')||el.classList.contains('tabpane'))break;let x=el.previousElementSibling;while(x){if(/^H[1-4]$/.test(x.tagName)){h=x;par=el.parentElement;break}x=x.previousElementSibling}}
+    if(!h){t._fold=null;return null}
+    if(!h._fold){const mk=document.createElement('span');mk.className='fold-mk';h.insertBefore(mk,h.firstChild);h.classList.add('fold-head');
+      const keep=k=>k===h||k.tagName==='TABLE'||[...k.querySelectorAll('button,select,input')].some(x=>!(x.tagName==='BUTTON'&&/^초기화$/.test(x.textContent.trim())))&&!(k.tagName==='BUTTON'&&/^초기화$/.test(k.textContent.trim()));
+      const F={h,open:true,tas:[],set(v){F.open=v;[...par.children].forEach(k=>{if(k!==h&&!keep(k))k.classList.add('fold-item')});par.classList.toggle('fold-closed',!v);mk.textContent=v?'▼ ':'▶ ';if(v)F.tas.forEach(x=>x.dispatchEvent(new Event('change')))}};
+      h.addEventListener('click',e=>{if(e.target.closest('button,input,select,a,textarea'))return;F.set(!F.open)});h._fold=F;F.set(true)}
+    const F=h._fold;F.tas.push(t);t._fold=F;if(t.value.trim())F.set(false);
+    t.addEventListener('paste',()=>setTimeout(()=>{if(t.value.trim()){F.set(false);t.blur()}},50));return F}
   const all=()=>document.querySelectorAll('textarea[id]').forEach(upd);document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('textarea[id]'))setTimeout(()=>upd(e.target),0)},true);
   setInterval(all,800);all()})();
 </script>
