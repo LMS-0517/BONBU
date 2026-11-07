@@ -1720,7 +1720,8 @@ function pbMerge(raw){const st=document.getElementById('pb-src-stat');const P=pb
   PB.hdr=P.hdr;PB.cols=P.cols;PB._idx={};PB.rows.forEach(r=>{r.isNew=false;PB._idx[pbCode(r)]=r});let upd=0,add=0;
   P.data.forEach(c=>{const code=String(c[P.cols[4]]).trim();const r=PB._idx[code];if(r){if(r.c.join('\t')!==c.join('\t')){r.c=c;upd++}}else{const nr={c,isNew:!first,added:ds};PB.rows.push(nr);PB._idx[code]=nr;add++}});
   PB.date=ds;pbSave();pbInfo();pbRender();if(PR.out)prRender();pbChgBadge(first?null:add,upd);
-  st.textContent=first?'내장 자료로 저장: '+P.data.length+'업체 (이 브라우저)':'반영: 붙인 '+P.data.length+'업체 · 갱신 '+upd+' · 신규 '+add+' (맨 왼쪽 신규 표시) → 총 '+PB.rows.length+'업체, 이 브라우저에 저장'}
+  const uq=new Set(P.data.map(c=>String(c[P.cols[4]]).trim())).size,dup=P.data.length-uq;
+  st.textContent='인식 '+uq.toLocaleString()+'업체'+(dup?' (같은 코드 '+dup+'줄은 한 업체로 합침)':'')+' · '+(first?'내장 자료로 저장 (이 브라우저)':'갱신 '+upd+' · 신규 '+add+' (맨 왼쪽 신규 표시) → 총 '+PB.rows.length.toLocaleString()+'업체, 이 브라우저에 저장')}
 function pbChgBadge(add,upd){const b=document.getElementById('pb-chg');if(add==null){b.className='chg-badge';b.textContent='';return}if(add){b.className='chg-badge new';b.textContent='신규 '+add.toLocaleString()+'건 추가'+(upd?' · 갱신 '+upd+'건':'')}else{b.className='chg-badge none';b.textContent=upd?'신규 없음 · 갱신 '+upd+'건':'변동 없음'}}
 async function pbEnc(){const pw=lsGet(TG_PWK);if(!PB.rows.length)throw '내장할 관리시트가 없습니다';if(!pw)throw '먼저 첫 화면 암호를 넣으세요';return 'KPPENC1|'+PB.date+'|'+PB.rows.length+'|'+await encText(pbPack(),pw)}
 document.getElementById('pb-copy').onclick=async()=>{const st=document.getElementById('pb-file-st');st.textContent='암호화 중…';let body;try{body=await pbEnc()}catch(e){st.textContent=String(e);return}
