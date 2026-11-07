@@ -1713,12 +1713,14 @@ async function pbLoad(pw){let best=null;
   try{const v=lsGet(PB_LS);if(v){const i=v.indexOf('|');const o=JSON.parse(await decText(v.slice(i+1),pw));if(!best||(o.date||'')>=(best.date||''))best=o}}catch(e){}
   if(best){PB={date:best.date||'',hdr:best.hdr||[],rows:best.rows||[],cols:best.cols||prSheetCols(best.hdr||[])}}pbInfo();pbRender()}
 function pbInfo(){const n=PB.rows.length,nn=PB.rows.filter(r=>r.isNew).length;document.getElementById('pb-info').textContent=n?'(내장 '+PB.date+' 기준 '+n+'업체'+(nn?' · 신규 '+nn:'')+')':'(내장 자료 없음 · 관리시트를 붙이면 이 브라우저에 저장)'}
+/* 갱신 비교: 칸 앞뒤 공백·끝 빈칸 차이는 같은 값으로 봄 */
+const pbSig=c=>{const v=c.map(x=>String(x??'').trim());while(v.length&&v[v.length-1]==='')v.pop();return v.join('\t')};
 function pbMerge(raw){const st=document.getElementById('pb-src-stat');const P=pbParse(raw);if(!P){st.textContent='인식 실패: "패드구분"·"코드" 머리글이 있는 관리시트를 머리글 2줄부터 끝까지 붙여넣으세요';return}
   const t=new Date();const ds=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');const first=!PB.rows.length;
   if(!first&&JSON.stringify(P.cols)!==JSON.stringify(pbCols())){/* 열 배치가 바뀌면 머리글 이름으로 옮김 */const key=(h,i)=>h.map(r=>String(r[i]||'').replace(/\s+/g,'')).join('|');const oh=PB.hdr,W=Math.max(...P.hdr.map(r=>r.length));const map=[];
     for(let i=0;i<W;i++){const k=key(P.hdr,i);let j=-1;if(k.replace(/\|/g,''))for(let q=0;q<Math.max(...oh.map(r=>r.length));q++)if(key(oh,q)===k){j=q;break}map.push(j)}PB.rows.forEach(r=>{r.c=map.map(j=>j>=0?r.c[j]||'':'')})}
   PB.hdr=P.hdr;PB.cols=P.cols;PB._idx={};PB.rows.forEach(r=>{r.isNew=false;PB._idx[pbCode(r)]=r});let upd=0,add=0;
-  P.data.forEach(c=>{const code=String(c[P.cols[4]]).trim();const r=PB._idx[code];if(r){if(r.c.join('\t')!==c.join('\t')){r.c=c;upd++}}else{const nr={c,isNew:!first,added:ds};PB.rows.push(nr);PB._idx[code]=nr;add++}});
+  P.data.forEach(c=>{const code=String(c[P.cols[4]]).trim();const r=PB._idx[code];if(r){if(pbSig(r.c)!==pbSig(c)){r.c=c;upd++}}else{const nr={c,isNew:!first,added:ds};PB.rows.push(nr);PB._idx[code]=nr;add++}});
   PB.date=ds;pbSave();pbInfo();pbRender();if(PR.out)prRender();pbChgBadge(first?null:add,upd);
   const uq=new Set(P.data.map(c=>String(c[P.cols[4]]).trim())).size,dup=P.data.length-uq;
   st.textContent='인식 '+uq.toLocaleString()+'업체'+(dup?' (같은 코드 '+dup+'줄은 한 업체로 합침)':'')+' · '+(first?'내장 자료로 저장 (이 브라우저)':'갱신 '+upd+' · 신규 '+add+' (맨 왼쪽 신규 표시) → 총 '+PB.rows.length.toLocaleString()+'업체, 이 브라우저에 저장')}
