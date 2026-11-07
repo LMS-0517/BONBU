@@ -660,7 +660,7 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null,out2:[],hash2:''};
   el.innerHTML=`<div class="card"><h2 data-fold="closed">0. 단가인상 관리시트 (내장) <span class="hint" id="pb-info" style="margin:0"></span><span class="chg-badge" id="pb-chg"></span></h2>
   <textarea id="pb-src" placeholder="단가인상 관리시트를 머리글(팀/권역 · 팀/지점 · 담당자 · 패드구분 · 코드 · 계약처명 … 26년 단가인상 실적)부터 끝까지 붙여넣기 → 내장 자료에 없던 코드는 맨 왼쪽에 '신규'로 표시하고 자동 추가, 있던 코드는 붙인 값으로 갱신"></textarea>
   <div class="hint" id="pb-src-stat"></div>
-  <div class="row" style="margin-top:6px;align-items:center"><button class="xs" id="pb-copy" type="button" title="지금 자료(신규 추가 포함)를 암호문으로 복사 → 채팅에 붙여 보내면 html 내장에 반영">내장 반영용 암호문 복사</button><button class="sec xs" id="pb-file" type="button" title="지금 내장 자료(신규 추가 포함)를 암호화한 파일 저장 → 보내 주면 html에 넣어 모든 사람에게 반영">암호화 파일 만들기</button><span class="hint" id="pb-file-st" style="margin:0"></span></div></div>
+  <div class="row" style="margin-top:6px;align-items:center"><button class="xs" id="pb-copy" type="button" title="지금 자료(신규 추가 포함)를 암호문으로 복사 → 채팅에 붙여 보내면 html 내장에 반영">내장 반영용 암호문 복사</button><button class="sec xs" id="pb-reset" type="button" title="이 브라우저에 저장된 단가인상 자료만 지우고 html 내장 자료로 돌아감 (암호는 그대로)">내장 자료로 되돌리기</button><button class="sec xs" id="pb-file" type="button" title="지금 내장 자료(신규 추가 포함)를 암호화한 파일 저장 → 보내 주면 html에 넣어 모든 사람에게 반영">암호화 파일 만들기</button><span class="hint" id="pb-file-st" style="margin:0"></span></div></div>
   <div class="grid"><div class="card"><h2>1. 단가인상 결재 리스트 붙여넣기 <span class="hint" style="margin:0">(완료)</span></h2>
   <textarea id="pr-src" placeholder="단가인상 결재 리스트(부서, 담당자, 항목, 코드, 계약처명 … 계약특이사항 …)를 헤더 포함해서 붙여넣기"></textarea>
   <div class="row" style="margin-top:8px"><button id="pr-run">자동 작성</button>
@@ -1726,6 +1726,10 @@ function pbMerge(raw){const st=document.getElementById('pb-src-stat');const P=pb
   st.textContent='인식 '+uq.toLocaleString()+'업체'+(dup?' (같은 코드 '+dup+'줄은 한 업체로 합침)':'')+' · '+(first?'내장 자료로 저장 (이 브라우저)':'갱신 '+upd+' · 신규 '+add+' (맨 왼쪽 신규 표시) → 총 '+PB.rows.length.toLocaleString()+'업체, 이 브라우저에 저장')}
 function pbChgBadge(add,upd){const b=document.getElementById('pb-chg');if(add==null){b.className='chg-badge';b.textContent='';return}if(add){b.className='chg-badge new';b.textContent='신규 '+add.toLocaleString()+'건 추가'+(upd?' · 갱신 '+upd+'건':'')}else{b.className='chg-badge none';b.textContent=upd?'신규 없음 · 갱신 '+upd+'건':'변동 없음'}}
 async function pbEnc(){const pw=lsGet(TG_PWK);if(!PB.rows.length)throw '내장할 관리시트가 없습니다';if(!pw)throw '먼저 첫 화면 암호를 넣으세요';return 'KPPENC1|'+PB.date+'|'+PB.rows.length+'|'+await encText(pbPack(),pw)}
+document.getElementById('pb-reset').onclick=async()=>{const st=document.getElementById('pb-file-st');if(!lsGet(PB_LS)){st.textContent='이 브라우저 저장본이 없습니다. 이미 내장 자료('+(PR_ENC.rows||0).toLocaleString()+'업체)를 보고 있습니다';return}
+  if(!confirm('이 브라우저에 저장된 단가인상 자료를 지우고 html 내장 자료('+(PR_ENC.rows||0).toLocaleString()+'업체)로 되돌릴까요?\n여기서 붙여 추가·갱신한 내용은 사라집니다. 암호는 그대로 남습니다.'))return;
+  lsSet(PB_LS,null);const t=document.getElementById('pb-src');t.value='';PB_HASH='';pbChgBadge(null);document.getElementById('pb-src-stat').textContent='';PB={date:'',hdr:[],rows:[],cols:null};
+  const pw=lsGet(TG_PWK);if(pw)await pbLoad(pw);else{pbInfo();pbRender()}if(PR.out)prRender();st.textContent='내장 자료로 되돌림: '+PB.rows.length.toLocaleString()+'업체'};
 document.getElementById('pb-copy').onclick=async()=>{const st=document.getElementById('pb-file-st');st.textContent='암호화 중…';let body;try{body=await pbEnc()}catch(e){st.textContent=String(e);return}
   let ok=false;try{await navigator.clipboard.writeText(body);ok=true}catch(e){const ta=document.createElement('textarea');ta.value=body;document.body.appendChild(ta);ta.select();try{ok=document.execCommand('copy')}catch(_){}ta.remove()}
   st.textContent=ok?'복사됨 ('+PB.rows.length.toLocaleString()+'업체, '+Math.round(body.length/1024)+'KB) → Claude 채팅에 붙여넣고 "단가인상 내장"이라고 보내 주세요':'복사 실패: [암호화 파일 만들기]로 파일을 저장해 내용을 보내 주세요'};
