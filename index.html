@@ -686,7 +686,7 @@ const PR={rows:[],hdr:[],data:[],map:{},hash:'',out:null,out2:[],hash2:''};
   <div class="card"><h2>3-2. 금주 주요업체 <span id="pr-stat2" class="ok"></span></h2>
   <div class="row" style="margin-bottom:10px"><button id="pr-copy2">값 복사 (내용만)</button>
   <span class="hint">N 구분, O 코드, V 업체명, X 효과금액, AC~AH 세부내용. 제목 셀(N열)을 선택하고 붙여넣기.</span></div><div id="pr-prev2" data-pid="pr-prev2v"></div></div>
-  <div class="card"><details id="pb-list"><summary style="cursor:pointer;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px"><span>세부리스트 (관리시트 + 금주 완료·진행중 반영) <span id="pb-list-n" class="hint" style="margin:0"></span></span><span style="margin-left:auto;display:flex;gap:6px;align-items:center"><span id="pb-list-st" class="hint" style="margin:0"></span><button class="sec xs" id="pb-lwk" type="button">변경업체만</button><button class="xs" id="pb-lsave" type="button" style="background:#fde4ec;border-color:#e88aa8;color:#a3375c">저장</button><button class="xs" id="pb-xlsx" type="button">관리시트 전체 엑셀 생성</button></span></summary><div id="pb-list-out" style="overflow:visible;margin-top:8px"></div></details></div>`;
+  <div class="card"><details id="pb-list"><summary style="cursor:pointer;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px"><span>세부리스트 (관리시트 + 금주 완료·진행중 반영) <span id="pb-list-n" class="hint" style="margin:0"></span></span><span style="margin-left:auto;display:flex;gap:6px;align-items:center"><span id="pb-list-st" class="hint" style="margin:0"></span><button class="sec xs" id="pb-lall" type="button">열 펼치기</button><button class="sec xs" id="pb-lwk" type="button">변경업체만</button><button class="xs" id="pb-lsave" type="button" style="background:#fde4ec;border-color:#e88aa8;color:#a3375c">저장</button><button class="xs" id="pb-xlsx" type="button">관리시트 전체 엑셀 생성</button></span></summary><div id="pb-list-out" style="overflow:visible;margin-top:8px"></div></details></div>`;
   const $=k=>document.getElementById('pr-'+k);
   $('run').onclick=prRun;
   ['status','gubun','fillRP','hdr','max','maxC','maxP','start','scope','layout'].forEach(k=>$(k).onchange=()=>{if(PR.out)prRender()});
@@ -720,20 +720,25 @@ function prRun(){
   prCompute();
 }
 /* 관리시트(팀/권역·팀/지점·담당자·패드구분·코드·계약처명 … 26년 단가인상 실적) 배치면 화면 표시용 열 위치: 패드구분 머리글 기준, 머리글 없으면 5번째 칸이 코드인 32열 */
-const PR_SHEET_OFF=[0,1,2,3,4,5,11,12,19,20,21,26,27,28,29,30,31];
-function prSheetBase(hdr,data){for(const r of hdr){const i=r.findIndex(c=>String(c||'').replace(/\s+/g,'')==='패드구분');if(i>=3)return i-3}
-  if(!hdr.length){const r=data.find(r=>r.length>=32&&isCode(r[4]));if(r)return 0}return -1}
-function prRecs(data,m,base){const g=(r,k)=>(m[k]>=0?(r[m[k]]||''):'').trim();
+/* 관리시트 열 찾기(머리글 이름 기준, 계약처명 병합 칸·숨긴 그룹 열이 있어도): 화면 17칸 = 팀/권역·팀/지점·담당자·패드구분·코드·계약처명·KPP단독/병행·25년 진행여부·상반기 실적반영월·年환산·하반기 계획월·年환산·26년(진행여부·적용월·구분·年예상효과·비고) */
+function prSheetCols(hdr){if(!hdr||!hdr.length)return null;const ns=v=>String(v||'').replace(/\s+/g,'').replace(/年/g,'년').replace(/月/g,'월');const W=Math.max(0,...hdr.map(r=>r.length));
+  const at=(re,from=0,to=W)=>{for(let i=Math.max(0,from);i<to;i++)if(hdr.some(r=>re.test(ns(r[i]))))return i;return -1};
+  const pad=at(/^패드구분$/),code=at(/^코드$/);if(pad<0||code<0)return null;
+  const S0=at(/상반기/),H0=at(/하반기/),R0=at(/26년단가인상실적/);const hEnd=R0>=0?R0:W;
+  const sr=at(/실적반영월/,S0>=0?S0:0,H0>=0?H0:W);let hy=-1;if(H0>=0)for(let i=H0;i<hEnd;i++)if(hdr.some(r=>/년환산금액/.test(ns(r[i]))))hy=i;const R=R0>=0?R0:0;
+  return [at(/^팀\/?권역$|^부서$/),at(/팀\/?지점/),at(/^담당자$/),pad,code,at(/계약처명/),at(/KPP단독|단독\/?병행/),at(/25년단가인상/),sr,sr>=0?sr+1:-1,H0>=0?at(/계획월/,H0,hEnd):-1,hy,at(/진행여부/,R),at(/적용월/,R),at(/단가인상구분/,R),at(/년예상효과/,R),at(/비고/,R)]}
+const pick=(r,cols)=>cols.map(i=>i>=0?String(r[i]??'').trim():'');
+function prRecs(data,m,cols){const g=(r,k)=>(m[k]>=0?(r[m[k]]||''):'').trim();
   return data.map(r=>{const a=g(r,'memo1'),b=g(r,'memo2');const memo=(a&&b&&a!==b)?a+' / '+b:(a||b);
-    const x={region:g(r,'region'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),amt:num(g(r,'amt')),kind:g(r,'kind'),week:g(r,'week'),memo,sheet:base>=0?PR_SHEET_OFF.map(o=>String(r[base+o]??'').trim()):null};
+    const x={region:g(r,'region'),person:g(r,'person'),code:g(r,'code'),name:g(r,'name'),amt:num(g(r,'amt')),kind:g(r,'kind'),week:g(r,'week'),memo,sheet:cols?pick(r,cols):null};
     /* 관리시트 배치면 26년 단가인상 실적 칸(적용월·구분·年예상효과·비고)을 그대로 씀 */if(x.sheet){const S=x.sheet;x.region=S[0]||x.region;x.person=S[2]||x.person;x.code=S[4]||x.code;x.name=S[5]||x.name;x.week=S[13]||x.week;x.kind=S[14]||x.kind;x.amt=num(S[15])||x.amt;x.memo=S[16]||x.memo}return x}).filter(x=>x.code||x.name)}
 function prParse(raw){const rows=parseTSV(raw);let first=rows.findIndex(r=>r.some(isCode)&&r.some(c=>/권역$/.test((c||'').trim())));if(first<0)first=rows.findIndex(r=>r.some(isCode));if(first<0)first=0;
   const hdr=rows.slice(0,first),data=rows.slice(first);const width=Math.max(0,...rows.map(r=>r.length));
   const htxt=Array.from({length:width},(_,i)=>hdr.map(r=>(r[i]||'').replace(/\s+/g,'')).join(' '));
   const map={};PFIELDS.forEach(([k,,keys,def])=>{map[k]=-1;for(const key of keys){const i=htxt.findIndex(t=>t.includes(key.replace(/\s+/g,'')));if(i>=0){map[k]=i;break}}if(map[k]<0&&!hdr.length)map[k]=def});
-  return {recs:prRecs(data,map,prSheetBase(hdr,data)),hdr:hdr.length,n:data.length,map}}
+  return {recs:prRecs(data,map,prSheetCols(hdr)),hdr:hdr.length,n:data.length,map}}
 function prCompute(){
-  PR.out=prRecs(PR.data,PR.map,prSheetBase(PR.hdr,PR.data));
+  PR.out=prRecs(PR.data,PR.map,prSheetCols(PR.hdr));
   prRender();
 }
 function prRender(){
@@ -776,7 +781,7 @@ function prGrid2View(){const {G,R,add,fill}=newGrid(17,[70,70,60,55,65,150,62,62
   R();['실적반영월','年환산금액(26년)','계획월','年환산금액(26년)'].forEach(h=>add(h,'h2'));['진행여부','적용월','단가인상구분(LPS품의)','年예상효과(천원)','비고(내용)'].forEach(h=>add(h,'hy'));
   const PR_BR={};Object.values(ORG).forEach(o=>Object.entries(o).forEach(([br,es])=>es.forEach(e=>PR_BR[e]=br)));/* 담당자 → 지점 */
   const nv=v=>{const t=String(v??'').trim();return /^-?[\d,]+(\.\d+)?$/.test(t)?num(t):t};
-  prRows2().forEach(x=>{R();const B=pbRow(x.code);const S=x.sheet||(B?PR_SHEET_OFF.map(o=>String(B.c[PB.base+o]??'').trim()):null);/* 관리시트(내장)에 있는 업체면 그 행의 칸으로 채움 */const v=S?S.slice():[x.region,PR_BR[x.person]||'',x.person,'',x.code,x.name,'','','','','','','','','','',''];if(B&&!x.sheet){v[13]=x.week||v[13];v[14]=x.kind||v[14];v[12]=x.gubun}
+  prRows2().forEach(x=>{R();const B=pbRow(x.code);const S=x.sheet||(B?pick(B.c,pbCols()):null);/* 관리시트(내장)에 있는 업체면 그 행의 칸으로 채움 */const v=S?S.slice():[x.region,PR_BR[x.person]||'',x.person,'',x.code,x.name,'','','','','','','','','','',''];if(B&&!x.sheet){v[13]=x.week||v[13];v[14]=x.kind||v[14];v[12]=x.gubun}
     if(!S){v[13]=x.week;v[14]=x.kind}v[12]=v[12]||x.gubun;v[15]=x.amt;v[16]=x.memo;if(!v[4])v[4]=x.code;if(!v[5])v[5]=x.name;
     v.forEach((c,i)=>{if(i===9||i===11||i===15){const n=nv(c);add(typeof n==='number'?n:c,typeof n==='number'?'b n':'b c')}else add(c,i===5||i===16?'b txt':'b c')});fill()});
   return G}
@@ -1693,51 +1698,63 @@ document.getElementById('gate-ok').onclick=()=>{const pw=document.getElementById
 document.getElementById('gate-pw').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('gate-ok').click()});
 /* ===== 단가인상 관리시트 내장: 암호화 내장(PR_ENC) 또는 이 브라우저 저장본(더 최근) → 붙이면 신규 자동 추가 → 세부리스트 ===== */
 const PR_ENC={date:'',rows:0,data:''};const PB_LS='kpp-bonbu-pb';
-let PB={date:'',hdr:[],rows:[],base:-1},PB_LE={},PB_WK=false,PB_HASH='';
-const pbCode=r=>PB.base>=0?String(r.c[PB.base+4]||'').trim():'';
-function pbRow(code){if(!code||PB.base<0)return null;if(!PB._idx){PB._idx={};PB.rows.forEach(r=>PB._idx[pbCode(r)]=r)}return PB._idx[String(code).trim()]||null}
-function pbParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').replace(/\s+$/,'')));let hi=-1,base=-1;
-  for(let i=0;i<Math.min(rows.length,8);i++){const j=rows[i].findIndex(c=>c.replace(/\s+/g,'')==='패드구분');if(j>=3){hi=i;base=j-3;break}}
-  if(base<0){const r=rows.find(r=>r.length>=32&&isCode(r[4]));if(!r)return null;base=0}
-  const first=rows.findIndex(r=>isCode(r[base+4]));if(first<0)return null;
-  return {hdr:rows.slice(Math.max(0,hi>=0?hi:first-2),first),data:rows.slice(first).filter(r=>isCode(r[base+4])),base}}
-async function pbSave(){const pw=lsGet(TG_PWK);if(!pw)return;try{lsSet(PB_LS,PB.date+'|'+await encText(JSON.stringify({date:PB.date,hdr:PB.hdr,rows:PB.rows,base:PB.base}),pw))}catch(e){}}
+let PB={date:'',hdr:[],rows:[],cols:null},PB_WK=false,PB_ALL=false,PB_HASH='';
+const pbCols=()=>PB.cols||(PB.cols=prSheetCols(PB.hdr))||[];const pbCode=r=>{const c=pbCols();return c[4]>=0?String(r.c[c[4]]||'').trim():''};
+function pbRow(code){if(!code||!PB.rows.length)return null;if(!PB._idx){PB._idx={};PB.rows.forEach(r=>PB._idx[pbCode(r)]=r)}return PB._idx[String(code).trim()]||null}
+function pbParse(raw){const rows=parseTSV(raw).map(r=>r.map(x=>String(x??'').replace(/\s+$/,'')));const ns=v=>String(v||'').replace(/\s+/g,'');
+  const hi=rows.slice(0,15).findIndex(r=>r.some(c=>ns(c)==='패드구분'));if(hi<0)return null;let first=-1;
+  for(let i=hi+1;i<rows.length&&first<0;i++){const cols=prSheetCols(rows.slice(hi,i));if(cols&&isCode(rows[i][cols[4]]))first=i}if(first<0)return null;
+  const hdr=rows.slice(hi,first),cols=prSheetCols(hdr);return {hdr,cols,data:rows.slice(first).filter(r=>isCode(r[cols[4]]))}}
+const pbPack=()=>JSON.stringify({date:PB.date,hdr:PB.hdr,rows:PB.rows,cols:PB.cols});
+async function pbSave(){const pw=lsGet(TG_PWK);if(!pw)return;try{lsSet(PB_LS,PB.date+'|'+await encText(pbPack(),pw))}catch(e){}}
 async function pbLoad(pw){let best=null;
-  try{if(PR_ENC.data){const o=JSON.parse(await decText(PR_ENC.data,pw));best=o}}catch(e){}
+  try{if(PR_ENC.data)best=JSON.parse(await decText(PR_ENC.data,pw))}catch(e){}
   try{const v=lsGet(PB_LS);if(v){const i=v.indexOf('|');const o=JSON.parse(await decText(v.slice(i+1),pw));if(!best||(o.date||'')>=(best.date||''))best=o}}catch(e){}
-  if(best){PB={date:best.date||'',hdr:best.hdr||[],rows:best.rows||[],base:best.base??-1}}pbInfo();pbRender()}
+  if(best){PB={date:best.date||'',hdr:best.hdr||[],rows:best.rows||[],cols:best.cols||prSheetCols(best.hdr||[])}}pbInfo();pbRender()}
 function pbInfo(){const n=PB.rows.length,nn=PB.rows.filter(r=>r.isNew).length;document.getElementById('pb-info').textContent=n?'(내장 '+PB.date+' 기준 '+n+'업체'+(nn?' · 신규 '+nn:'')+')':'(내장 자료 없음 · 관리시트를 붙이면 이 브라우저에 저장)'}
-function pbMerge(raw){const st=document.getElementById('pb-src-stat');const P=pbParse(raw);if(!P){st.textContent='인식 실패: "패드구분" 머리글이 있는 관리시트(팀/권역부터 비고(내용)까지)를 머리글째 붙여넣으세요';return}
-  const today=new Date();const ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-  const first=!PB.rows.length;if(P.base!==PB.base&&!first){/* 열 위치가 다르면 붙인 배치로 맞춤 */PB.rows.forEach(r=>{const sh=P.base-PB.base;r.c=sh>0?Array(sh).fill('').concat(r.c):r.c.slice(-sh)})}
-  PB.base=P.base;if(P.hdr.length)PB.hdr=P.hdr;PB._idx=null;PB.rows.forEach(r=>r.isNew=false);let upd=0,add=0;
-  P.data.forEach(c=>{const code=String(c[P.base+4]).trim();const r=pbRow(code);if(r){if(r.c.join('\t')!==c.join('\t')){r.c=c;upd++}}else{const nr={c,isNew:!first,added:ds};PB.rows.push(nr);PB._idx[code]=nr;add++}});
-  PB.date=ds;PB_LE={};pbSave();pbInfo();pbRender();if(PR.out)prRender();
+function pbMerge(raw){const st=document.getElementById('pb-src-stat');const P=pbParse(raw);if(!P){st.textContent='인식 실패: "패드구분"·"코드" 머리글이 있는 관리시트를 머리글 2줄부터 끝까지 붙여넣으세요';return}
+  const t=new Date();const ds=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');const first=!PB.rows.length;
+  if(!first&&JSON.stringify(P.cols)!==JSON.stringify(pbCols())){/* 열 배치가 바뀌면 머리글 이름으로 옮김 */const key=(h,i)=>h.map(r=>String(r[i]||'').replace(/\s+/g,'')).join('|');const oh=PB.hdr,W=Math.max(...P.hdr.map(r=>r.length));const map=[];
+    for(let i=0;i<W;i++){const k=key(P.hdr,i);let j=-1;if(k.replace(/\|/g,''))for(let q=0;q<Math.max(...oh.map(r=>r.length));q++)if(key(oh,q)===k){j=q;break}map.push(j)}PB.rows.forEach(r=>{r.c=map.map(j=>j>=0?r.c[j]||'':'')})}
+  PB.hdr=P.hdr;PB.cols=P.cols;PB._idx={};PB.rows.forEach(r=>{r.isNew=false;PB._idx[pbCode(r)]=r});let upd=0,add=0;
+  P.data.forEach(c=>{const code=String(c[P.cols[4]]).trim();const r=PB._idx[code];if(r){if(r.c.join('\t')!==c.join('\t')){r.c=c;upd++}}else{const nr={c,isNew:!first,added:ds};PB.rows.push(nr);PB._idx[code]=nr;add++}});
+  PB.date=ds;pbSave();pbInfo();pbRender();if(PR.out)prRender();
   st.textContent=first?'내장 자료로 저장: '+P.data.length+'업체 (이 브라우저)':'반영: 붙인 '+P.data.length+'업체 · 갱신 '+upd+' · 신규 '+add+' (맨 왼쪽 신규 표시) → 총 '+PB.rows.length+'업체, 이 브라우저에 저장'}
 document.getElementById('pb-src').addEventListener('input',()=>{const v=document.getElementById('pb-src').value;if(!v.trim()||v===PB_HASH)return;PB_HASH=v;clearTimeout(window.__pbm);window.__pbm=setTimeout(()=>pbMerge(v),300)});
 document.getElementById('pb-file').onclick=async()=>{const st=document.getElementById('pb-file-st'),pw=lsGet(TG_PWK);if(!PB.rows.length){st.textContent='내장할 관리시트가 없습니다';return}if(!pw){st.textContent='먼저 첫 화면 암호를 넣으세요';return}st.textContent='암호화 중…';
-  const body='KPPENC1|'+PB.date+'|'+PB.rows.length+'|'+await encText(JSON.stringify({date:PB.date,hdr:PB.hdr,rows:PB.rows,base:PB.base}),pw);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([body],{type:'text/plain'}));a.download='단가인상관리시트_암호화_'+PB.date.replace(/-/g,'')+'.txt';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  const body='KPPENC1|'+PB.date+'|'+PB.rows.length+'|'+await encText(pbPack(),pw);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([body],{type:'text/plain'}));a.download='단가인상관리시트_암호화_'+PB.date.replace(/-/g,'')+'.txt';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
   st.textContent='저장: '+a.download+' ('+Math.round(body.length/1024)+'KB) · 이 파일 내용을 보내 주면 html에 넣어 모두에게 반영'};
-/* 금주 완료·진행중 → 관리시트 26년 단가인상 실적(진행여부·적용월·구분·年예상효과·비고) 칸에 반영해 보여 줌 */
+/* 금주 완료·진행중 → 26년 단가인상 실적(진행여부·적용월·구분·年예상효과·비고) 칸에 반영해 보여 줌 */
 function pbWeek(){const W={};(PR.out||[]).forEach(x=>{W[x.code]={...x,gubun:'완료'}});(PR.out2||[]).forEach(x=>{if(!W[x.code])W[x.code]={...x,gubun:'진행중'}});return W}
-function pbView(r,W){const c=r.c.slice();const up={};const w=W[pbCode(r)];if(w&&PB.base>=0){const b=PB.base;[[27,w.gubun],[28,w.week],[29,w.kind],[30,w.amt?String(w.amt):''],[31,w.memo]].forEach(([o,v])=>{if(v!==''&&v!=null&&String(v)!==String(c[b+o]||'').replace(/,/g,'')){c[b+o]=v;up[b+o]=1}})}return {c,up,chg:!!w}}
+function pbView(r,W){const c=r.c.slice();const up={};const w=W[pbCode(r)];const C=pbCols();if(w)[[12,w.gubun],[13,w.week],[14,w.kind],[15,w.amt?w.amt.toLocaleString():''],[16,w.memo]].forEach(([j,v])=>{const i=C[j];if(i<0||v===''||v==null)return;if(String(v).replace(/,/g,'')!==String(c[i]||'').replace(/,/g,'')){while(c.length<=i)c.push('');c[i]=v;up[i]=1}});return {c,up,chg:!!w}}
+/* 그룹 묶음(엑셀에서 그룹 접은 모양): 17칸 + 머리글 2줄. [열 펼치기]면 원래 열 전체 */
+const PB_GRP=[['상반기 단가인상 계획및 실적',8,2,'#a9c08a'],['하반기 단가인상 계획',10,2,'#e2c99c'],['26년 단가인상 실적',12,5,'#e6e64c']];
+const PB_SUB=['실적반영월','年환산금액(26년)','계획월','年환산금액(26년)','진행여부','적용월','단가인상구분(LPS품의)','年예상효과(천원)','비고(내용)'];
+const PB_ONE=['팀/권역','팀/지점','담당자','패드구분','코드','계약처명','KPP단독/병행','25년 단가인상 진행여부'];
 function pbRender(){const box=document.getElementById('pb-list-out'),nEl=document.getElementById('pb-list-n');if(!box)return;if(!PB.rows.length){box.innerHTML='';nEl.textContent='(관리시트 내장 자료 없음)';return}
-  const W=pbWeek();const width=Math.max(...PB.hdr.map(r=>r.length),...PB.rows.map(r=>r.c.length));let nC=0;const known=new Set(PB.rows.map(pbCode));
-  const td=(v,st,ri,ci,ed)=>'<td'+(ed?' contenteditable="true" data-br="'+ri+'" data-bc="'+ci+'"':'')+' style="border:1px solid #c8ced8;padding:2px 5px;white-space:nowrap;'+st+'">'+esc(typeof v==='number'?v.toLocaleString():v).replace(/<br>/g,' ')+'</td>';
-  let h='<table style="border-collapse:collapse;font-size:12px">'+PB.hdr.map((r,hi)=>'<tr data-chg="h">'+td(hi?'':'신규','background:#dce6f1;font-weight:700;text-align:center;')+Array.from({length:width},(_,i)=>td(r[i]||'','background:#dce6f1;font-weight:700;text-align:center;')).join('')+'</tr>').join('');
+  const W=pbWeek(),C=pbCols();const width=Math.max(...PB.hdr.map(r=>r.length),...PB.rows.map(r=>r.c.length));const cols=PB_ALL?Array.from({length:width},(_,i)=>i):C;let nC=0;const known=new Set(PB.rows.map(pbCode));
+  const HS='font-weight:700;text-align:center;',td=(v,st,ri,ci,ed,a)=>'<td'+(a||'')+(ed?' contenteditable="true" data-br="'+ri+'" data-bc="'+ci+'"':'')+' style="border:1px solid #c8ced8;padding:2px 5px;white-space:nowrap;'+st+'">'+esc(typeof v==='number'?v.toLocaleString():v).replace(/<br>/g,' ')+'</td>';
+  let h='<table style="border-collapse:collapse;font-size:12px">';
+  if(PB_ALL)h+=PB.hdr.map((r,hi)=>'<tr data-chg="h">'+td(hi?'':'신규','background:#dce6f1;'+HS)+cols.map(i=>td(r[i]||'','background:#dce6f1;'+HS)).join('')+'</tr>').join('');
+  else{h+='<tr data-chg="h">'+td('신규','background:#dce6f1;'+HS,0,0,false,' rowspan="2"')+PB_ONE.map(t=>td(t,'background:#dce6f1;'+HS,0,0,false,' rowspan="2"')).join('')+PB_GRP.map(([t,,n,bg])=>td(t,'background:'+bg+';'+HS,0,0,false,' colspan="'+n+'"')).join('')+'</tr>';
+    h+='<tr data-chg="h">'+PB_SUB.map((t,j)=>td(t,'background:'+(j<2?PB_GRP[0][3]:j<4?PB_GRP[1][3]:PB_GRP[2][3])+';'+HS)).join('')+'</tr>'}
   PB.rows.forEach((r,ri)=>{const V=pbView(r,W);const chg=V.chg||r.isNew;if(V.chg)nC++;
-    h+='<tr data-chg="'+(chg?1:0)+'"'+(!chg&&PB_WK?' style="display:none"':'')+'>'+td(r.isNew?'신규':'',r.isNew?'background:#fff2cc;color:#c00000;font-weight:700;text-align:center;':'text-align:center;')+Array.from({length:width},(_,i)=>{const k=ri+'|'+i;const le=k in PB_LE;return td(le?PB_LE[k]:(V.c[i]||''),le?'background:#f8cfdc;':V.up[i]?'background:#a9d08e;font-weight:700;':V.chg?'background:#e2f0d9;':'',ri,i,true)}).join('')+'</tr>'});
-  const miss=Object.values(W).filter(w=>!known.has(w.code));miss.forEach(w=>{h+='<tr data-chg="1">'+td('미등록','background:#fde4ec;color:#a3375c;font-weight:700;text-align:center;')+Array.from({length:width},(_,i)=>{const o=i-PB.base;const m={0:w.region,2:w.person,4:w.code,5:w.name,27:w.gubun,28:w.week,29:w.kind,30:w.amt||'',31:w.memo};return td(o in m?m[o]:'','background:#fde4ec;')}).join('')+'</tr>'});
-  box.innerHTML=h+'</table>';nEl.textContent='(관리시트 '+PB.rows.length+'업체 · 금주 반영 '+nC+'곳 연두'+(miss.length?' · 관리시트에 없는 업체 '+miss.length+' 분홍':'')+' · 신규 '+PB.rows.filter(r=>r.isNew).length+')';document.getElementById('pb-lwk').textContent=PB_WK?'전체 보기':'변경업체만';
+    h+='<tr data-chg="'+(chg?1:0)+'"'+(!chg&&PB_WK?' style="display:none"':'')+'>'+td(r.isNew?'신규':'',r.isNew?'background:#fff2cc;color:#c00000;'+HS:'text-align:center;')+cols.map(i=>i<0?td('',''):td(V.c[i]||'',V.up[i]?'background:#a9d08e;font-weight:700;':V.chg?'background:#e2f0d9;':'',ri,i,true)).join('')+'</tr>'});
+  const miss=Object.values(W).filter(w=>!known.has(w.code));miss.forEach(w=>{const m={[C[0]]:w.region,[C[2]]:w.person,[C[4]]:w.code,[C[5]]:w.name,[C[12]]:w.gubun,[C[13]]:w.week,[C[14]]:w.kind,[C[15]]:w.amt||'',[C[16]]:w.memo};h+='<tr data-chg="1">'+td('미등록','background:#fde4ec;color:#a3375c;'+HS)+cols.map(i=>td(i>=0&&i in m?m[i]:'','background:#fde4ec;')).join('')+'</tr>'});
+  box.innerHTML=h+'</table>';nEl.textContent='(관리시트 '+PB.rows.length+'업체 · 금주 반영 '+nC+'곳 연두'+(miss.length?' · 관리시트에 없는 업체 '+miss.length+' 분홍':'')+' · 신규 '+PB.rows.filter(r=>r.isNew).length+')';
+  document.getElementById('pb-lwk').textContent=PB_WK?'전체 보기':'변경업체만';document.getElementById('pb-lall').textContent=PB_ALL?'열 묶기':'열 펼치기';
   box.querySelectorAll('td[data-br]').forEach(c=>c.addEventListener('input',()=>{c.style.background='#f8cfdc';c.dataset.ed='1';document.getElementById('pb-list-st').textContent='수정 중 · [저장]을 누르면 내장 자료에 반영'}))}
 document.getElementById('pb-lwk').onclick=e=>{e.preventDefault();e.stopPropagation();PB_WK=!PB_WK;document.getElementById('pb-list').open=true;document.querySelectorAll('#pb-list-out tr[data-chg="0"]').forEach(tr=>tr.style.display=PB_WK?'none':'');document.getElementById('pb-lwk').textContent=PB_WK?'전체 보기':'변경업체만'};
+document.getElementById('pb-lall').onclick=e=>{e.preventDefault();e.stopPropagation();PB_ALL=!PB_ALL;document.getElementById('pb-list').open=true;pbRender()};
 document.getElementById('pb-lsave').onclick=e=>{e.preventDefault();e.stopPropagation();const st=document.getElementById('pb-list-st');const eds=[...document.querySelectorAll('#pb-list-out td[data-ed]')];if(!eds.length){st.textContent='고친 칸이 없습니다';return}
   eds.forEach(c=>{const r=PB.rows[+c.dataset.br];const i=+c.dataset.bc;while(r.c.length<=i)r.c.push('');r.c[i]=c.innerText.replace(/ /g,' ').replace(/\n+$/,'').trim()});PB._idx=null;pbSave();document.getElementById('pb-list').open=true;pbRender();if(PR.out)prRender();st.textContent='저장: '+eds.length+'칸 → 내장 자료(이 브라우저)에 반영'};
+/* 엑셀: 원래 열 전체 + 엑셀 그룹(접힌 상태)으로 세부리스트처럼 보임 */
 document.getElementById('pb-xlsx').onclick=e=>{e.preventDefault();e.stopPropagation();const st=document.getElementById('pb-list-st');if(!PB.rows.length){st.textContent='관리시트 내장 자료가 없습니다';return}
-  const ST=xlStyles();const S=o=>ST.get(o);const W=pbWeek();const width=Math.max(...PB.hdr.map(r=>r.length),...PB.rows.map(r=>r.c.length));const rows=[];
+  const ST=xlStyles();const S=o=>ST.get(o);const W=pbWeek(),C=pbCols();const width=Math.max(...PB.hdr.map(r=>r.length),...PB.rows.map(r=>r.c.length));const rows=[];const show=new Set(C.filter(i=>i>=0));
   PB.hdr.forEach((r,hi)=>rows.push({cells:[{v:hi?'':'신규',s:S({b:1,sz:10,fill:'DCE6F1',border:'thin',wrap:1})},...Array.from({length:width},(_,i)=>({v:r[i]||'',s:S({b:1,sz:10,fill:'DCE6F1',border:'thin',wrap:1})}))],ht:30}));
-  PB.rows.forEach(r=>{const V=pbView(r,W);rows.push({cells:[{v:r.isNew?'신규':'',s:S({sz:10,border:'thin',fill:r.isNew?'FFF2CC':undefined})},...Array.from({length:width},(_,i)=>{let v=V.c[i]??'';const isN=/^-?\d{1,3}(,\d{3})+(\.\d+)?$|^-?[1-9]\d*(\.\d+)?$/.test(String(v))&&i!==PB.base+4;if(isN)v=num(v);return {v,s:S({sz:10,border:'thin',h:isN?'right':i===PB.base+31||i===PB.base+5?'left':'center',num:isN?1:0,fill:V.up[i]?'C6E0B4':V.chg?'E2EFDA':undefined})}})],ht:18})});
-  const d=new Date(),nm='단가인상관리시트_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(xlWorkbook([{name:'단가인상 관리시트',xml:xlSheet(rows,[],[6,...Array.from({length:width},(_,i)=>i===PB.base+31?60:i===PB.base+5?22:11)],{noGrid:false})}],ST.xml()),nm);st.textContent='저장: '+nm+' (금주 반영 칸 연두, 신규 노랑)'};
+  PB.rows.forEach(r=>{const V=pbView(r,W);rows.push({cells:[{v:r.isNew?'신규':'',s:S({sz:10,border:'thin',fill:r.isNew?'FFF2CC':undefined})},...Array.from({length:width},(_,i)=>{let v=V.c[i]??'';const isN=/^-?\d{1,3}(,\d{3})+(\.\d+)?$|^-?[1-9]\d*(\.\d+)?$/.test(String(v))&&i!==C[4];if(isN)v=num(v);return {v,s:S({sz:10,border:'thin',h:isN?'right':i===C[16]||i===C[5]?'left':'center',num:isN?1:0,fill:V.up[i]?'C6E0B4':V.chg?'E2EFDA':undefined})}})],ht:18})});
+  const grp=[];for(let i=Math.max(0,C[0]);i<width;i++)if(!show.has(i))grp.push(i+2);/* 신규 칸 1 + 1부터 시작 */
+  const d=new Date(),nm='단가인상관리시트_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.xlsx';dlBlob(xlWorkbook([{name:'단가인상 관리시트',xml:xlSheet(rows,[],[6,...Array.from({length:width},(_,i)=>i===C[16]?60:i===C[5]?22:11)],{cols:grp,collapse:1})}],ST.xml()),nm);st.textContent='저장: '+nm+' (숨긴 열은 엑셀 그룹으로 접힘, 금주 반영 칸 연두, 신규 노랑)'};
 pbInfo();
 document.getElementById('tg-lwk').onclick=e=>{e.preventDefault();e.stopPropagation();TG_LWK=!TG_LWK;document.getElementById('tg-list').open=true;document.querySelectorAll('#tg-list-out tr[data-chg="0"]').forEach(tr=>tr.style.display=TG_LWK?'none':'');document.getElementById('tg-lwk').textContent=TG_LWK?'전체 보기':'변경업체만'};
 document.getElementById('tg-lsave').onclick=e=>{e.preventDefault();e.stopPropagation();const st=document.getElementById('tg-list-st');const eds=[...document.querySelectorAll('#tg-list-out td[data-ed]')];if(!eds.length){st.textContent='고친 칸이 없습니다';return}let n=0;
