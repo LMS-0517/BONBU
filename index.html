@@ -394,7 +394,7 @@ function buildGrid(){
 /* 행 범위 잘라내기: 수정값 반영 후 A열 제거 → 선택한 셀부터 붙는 내용만 그리드 */
 function subGrid(G,r0,r1,c0=1,c1){applyEdits(G);const W=G.W;c1=c1==null?W:c1;const S=[];S.W=c1-c0;S.noSkip=true;S.widths=(G.widths||FW).slice(c0,c1);
   G.slice(r0,r1).forEach((r,i)=>{S.push({cells:r.cells.filter(c=>c.col>=c0&&c.col<c1).map(c=>Object.assign({},c,{col:c.col-c0})),pos:0,idx:i})});return S}
-const FW=[20,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
+const FW=[38,85,85,90,85,85,85,85,85,85,85,85,90,130,90,90,75];
 const EDITS={};
 function applyEdits(G){const e=G.pid&&EDITS[G.pid];if(!e)return;G.forEach((r,ri)=>r.cells.forEach(c=>{const k=ri+','+c.col;if(!(k in e))return;const t=e[k];
   if(/\bn\b/.test(c.cls))c.v=(t.trim()==='-'||t.trim()==='')?0:num(t);else if(/\bp\b/.test(c.cls))c.v=num(t)/100;else c.v=t}))}
@@ -429,7 +429,7 @@ function gridToTsv(G){
   return G.map(r=>{const cells=new Array(G.W).fill('');r.cells.forEach(c=>{cells[c.col]=cellVal(c,false)});return (skipA?cells.slice(1):cells).join('\t')}).join('\r\n');
 }
 renderCum();
-function render(){if(!out)return;const F=buildGrid();F.hl={r:F.majStart,c:1};const pv=document.getElementById('preview');pv.innerHTML=gridToHtml(F,true);
+function render(){if(!out)return;const F=buildGrid();F.hl={r:F.majStart,c:0};/* 주요업체 복사는 A열(신규 표시)부터 → 빨간 테두리도 A열 */const pv=document.getElementById('preview');pv.innerHTML=gridToHtml(F,true);
   /* 표마다 왼쪽에 복사 버튼: 2차 타겟 현황 · 신규업체 현황(서식 포함) · 금주 주요업체(A~Q 값) */
   const tb=pv.querySelector('table');if(!tb)return;const trs=tb.rows;
   [[0,'2차 타겟 표 복사','tgt'],[F.newStart,'신규업체 표 복사','new'],[F.majStart-2,'주요업체 복사','maj']].forEach(([ri,t,k])=>{const tr=trs[ri];if(!tr)return;const b=document.createElement('button');b.className='xs farm-tcopy';b.textContent=t;b.dataset.k=k;
