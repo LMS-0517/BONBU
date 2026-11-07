@@ -1720,7 +1720,8 @@ function pbMerge(raw){const st=document.getElementById('pb-src-stat');const P=pb
   if(!first&&JSON.stringify(P.cols)!==JSON.stringify(pbCols())){/* 열 배치가 바뀌면 머리글 이름으로 옮김 */const key=(h,i)=>h.map(r=>String(r[i]||'').replace(/\s+/g,'')).join('|');const oh=PB.hdr,W=Math.max(...P.hdr.map(r=>r.length));const map=[];
     for(let i=0;i<W;i++){const k=key(P.hdr,i);let j=-1;if(k.replace(/\|/g,''))for(let q=0;q<Math.max(...oh.map(r=>r.length));q++)if(key(oh,q)===k){j=q;break}map.push(j)}PB.rows.forEach(r=>{r.c=map.map(j=>j>=0?r.c[j]||'':'')})}
   PB.hdr=P.hdr;PB.cols=P.cols;PB._idx={};PB.rows.forEach(r=>{r.isNew=false;PB._idx[pbCode(r)]=r});let upd=0,add=0;
-  P.data.forEach(c=>{const code=String(c[P.cols[4]]).trim();const r=PB._idx[code];if(r){if(pbSig(r.c)!==pbSig(c)){r.c=c;upd++}}else{const nr={c,isNew:!first,added:ds};PB.rows.push(nr);PB._idx[code]=nr;add++}});
+  /* 같은 코드가 여러 줄이면 마지막 줄 하나로 보고 비교 (줄마다 번갈아 갱신으로 세던 문제) */const PM=new Map();P.data.forEach(c=>PM.set(String(c[P.cols[4]]).trim(),c));
+  PM.forEach((c,code)=>{const r=PB._idx[code];if(r){if(pbSig(r.c)!==pbSig(c)){r.c=c;upd++}}else{const nr={c,isNew:!first,added:ds};PB.rows.push(nr);PB._idx[code]=nr;add++}});
   PB.date=ds;pbSave();pbInfo();pbRender();if(PR.out)prRender();pbChgBadge(first?null:add,upd);
   const uq=new Set(P.data.map(c=>String(c[P.cols[4]]).trim())).size,dup=P.data.length-uq;
   st.textContent='인식 '+uq.toLocaleString()+'업체'+(dup?' (같은 코드 '+dup+'줄은 한 업체로 합침)':'')+' · '+(first?'내장 자료로 저장 (이 브라우저)':'갱신 '+upd+' · 신규 '+add+' (맨 왼쪽 신규 표시) → 총 '+PB.rows.length.toLocaleString()+'업체, 이 브라우저에 저장')}
