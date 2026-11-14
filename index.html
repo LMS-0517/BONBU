@@ -347,9 +347,9 @@ function run(){
   const cap={계약:cfg.capC,견적:cfg.capQ,방문:cfg.capV};const major=[];
   ['계약','견적','방문'].forEach(s=>{major.push(...cur.filter(x=>x.stage===s&&x.amt>=cfg.minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s]))});
   /* 금주 주요업체 순서: 계약 → 견적 → 방문, 같은 단계 안에서는 예상매출 큰 순 (신규 여부와 무관) */const SO={계약:0,견적:1,방문:2};major.sort((a,b)=>(SO[a.stage]-SO[b.stage])||(b.amt-a.amt));
-  /* 신규업체 표: 대상 업체수·예상매출 = 붙인 리스트의 신규 행, 주간 실적 = 금주 신규 행, 누계 = 붙인 리스트 신규 행 전체의 진행단계 */
+  /* 신규업체 표: 대상 업체수·예상매출 = 붙인 리스트의 신규 행 전체, 주간 실적 = 금주 신규 행, 누계 = 최종방문 주차가 누계 시작~선택 주차인 신규 행의 진행단계 */
   const nw={};REG.forEach(k=>{nw[k]={n:0,s:0,v:0,q:0,c:0,am:0,cv:0,cq:0,cc:0,cam:0}});
-  recs.filter(x=>x.isNew).forEach(x=>{const o=nw[x.region];o.n++;o.s+=x.amt;/* 신규 금액 = 리스트의 예상매출 */const st=x.stage;if(st==='방문')o.cv++;if(st==='견적')o.cq++;if(st==='계약'){o.cc++;o.cam+=x.amt}
+  recs.filter(x=>x.isNew).forEach(x=>{const o=nw[x.region];o.n++;o.s+=x.amt;/* 신규 금액 = 리스트의 예상매출 */const st=x.stage;/* 신규 누계도 11/1 리셋: 최종방문 주차가 [누계 시작 ~ 선택 주차]인 신규만 (대상 업체수·예상매출은 신규 전체) */const xo=ord(x.visit);if(xo!=null&&xo>=lo&&(hi==null||xo<=hi)){if(st==='방문')o.cv++;if(st==='견적')o.cq++;if(st==='계약'){o.cc++;o.cam+=x.amt}}
     if(isWk(x.visit)){if(st==='방문')o.v++;if(st==='견적')o.q++;if(st==='계약'){o.c++;o.am+=x.amt}}});
   const newN=recs.filter(x=>x.isNew).length;
   out={week,major,cur,wk,cm,nw,newN,newCol:c.gubun,compCol:c.comp,range:cfg.range};
