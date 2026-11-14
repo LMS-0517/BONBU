@@ -336,13 +336,14 @@ function run(){
   const wkO=wOrd(week);const isWk=v=>v===week||(wkO!=null&&wOrd(v)===wkO);/* '11월2주'와 '26년 11월2주'는 같은 주 */
   const cur=recs.filter(x=>isWk(x.visit));
   const wk={},cm={};REG.forEach(r=>{wk[r]={방문:0,견적:0,계약:0,amt:0}});
-  cur.filter(x=>!x.isNew).forEach(x=>{if(!x.stage)return;/* 위 2차 타겟 표는 신규 제외 (신규는 아래 신규업체 현황 표) */wk[x.region][x.stage]++;if(x.stage=='계약')wk[x.region].amt+=x.amt});
+  /* 신규와 2차 타겟 중복 금지: 신규 행에 있는 코드(또는 코드 없으면 업체명)는 2차 타겟에서 뺌 */const nKey=x=>x.code||('#'+x.name);const NEWK=new Set(recs.filter(x=>x.isNew).map(nKey));const isTgt=x=>!x.isNew&&!NEWK.has(nKey(x));const dupN=recs.filter(x=>!x.isNew&&NEWK.has(nKey(x))).length;
+  cur.filter(isTgt).forEach(x=>{if(!x.stage)return;/* 위 2차 타겟 표는 신규 제외 (신규는 아래 신규업체 현황 표) */wk[x.region][x.stage]++;if(x.stage=='계약')wk[x.region].amt+=x.amt});
   /* 2차 타겟 누계실적: 11/1 리셋. 리스트에서 최종방문 주차가 [누계 시작 ~ 선택 주차]인 업체(신규 제외)를 진행단계별로 셈 */
   const csl=(document.getElementById('farm-cs').value||'').trim();const cs=wOrd(csl);
   const ord=wOrd;const lo=cs!=null?cs:-1,hi=ord(week);let cmN=0;
   REG.forEach(r=>{cm[r]={방문:0,견적:0,계약:0,amt:0}});
-  recs.filter(x=>!x.isNew&&x.stage).forEach(x=>{const o=ord(x.visit);if(o==null||o<lo||(hi!=null&&o>hi))return;const t=cm[x.region];t[x.stage]++;if(x.stage==='계약')t.amt+=x.amt;cmN++});
-  document.getElementById('detect').innerHTML+=weekWarn+' · 누계: '+(cs?csl:'시작 주차 인식 못함')+' ~ '+(week||'')+' '+cmN+'업체'+((hi!=null&&lo!=null&&hi<lo)?' <b style="color:#c00000">⚠ 선택 주차('+week+')가 누계 시작('+csl+')보다 앞이라 누계가 비어 있습니다. 주차를 확인하세요</b>':'');
+  recs.filter(x=>isTgt(x)&&x.stage).forEach(x=>{const o=ord(x.visit);if(o==null||o<lo||(hi!=null&&o>hi))return;const t=cm[x.region];t[x.stage]++;if(x.stage==='계약')t.amt+=x.amt;cmN++});
+  document.getElementById('detect').innerHTML+=(dupN?' · <b style="color:#c00000">신규와 겹친 2차 타겟 '+dupN+'행은 신규로만 셈</b>':'')+weekWarn+' · 누계: '+(cs?csl:'시작 주차 인식 못함')+' ~ '+(week||'')+' '+cmN+'업체'+((hi!=null&&lo!=null&&hi<lo)?' <b style="color:#c00000">⚠ 선택 주차('+week+')가 누계 시작('+csl+')보다 앞이라 누계가 비어 있습니다. 주차를 확인하세요</b>':'');
   const cap={계약:cfg.capC,견적:cfg.capQ,방문:cfg.capV};const major=[];
   ['계약','견적','방문'].forEach(s=>{major.push(...cur.filter(x=>x.stage===s&&x.amt>=cfg.minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s]))});
   /* 금주 주요업체 순서: 계약 → 견적 → 방문, 같은 단계 안에서는 예상매출 큰 순 (신규 여부와 무관) */const SO={계약:0,견적:1,방문:2};major.sort((a,b)=>(SO[a.stage]-SO[b.stage])||(b.amt-a.amt));
