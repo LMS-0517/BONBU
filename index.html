@@ -137,15 +137,15 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 </div>
 <div class="card">
   <h2 data-fold="closed">2. 전주 누계 (지난주 회의자료의 "2차 타겟 현황" 표를 복사해서 붙여넣기 → 적용)</h2>
-  <textarea id="cumsrc" style="min-height:70px" placeholder="지난주 자료의 경북권역~영남영업본부 행(부서 열부터 방문진행률까지)을 복사해서 붙여넣으세요. 누계실적 4칸이 전주 누계로 들어갑니다."></textarea>
+  <textarea id="cumsrc" style="min-height:70px" placeholder="지난주 자료의 경북권역~영남영업본부 행(부서 열부터 방문진행률까지)을 복사해서 붙여넣으세요. 대상 업체수·매출을 가져옵니다. (누계실적은 리스트에서 다시 계산)"></textarea>
   <div class="row" style="margin-top:6px"><button class="sec" id="cumapply">전주 누계 적용</button><span id="cumstat" class="hint"></span></div>
   <div id="cum"></div>
-  <div class="hint">붙여넣은 전주 표가 그대로 표시됩니다(아래 결과와 비교용). 이번주 누계 = 전주 누계실적 + 금주 실적. 방문진행률 = (누계 방문+견적+계약완료) ÷ 대상 업체수.</div>
+  <div class="hint">붙여넣은 전주 표가 그대로 표시됩니다(아래 결과와 비교용). 2차 타겟 누계실적 = 리스트에서 최종방문 주차가 [누계 시작(11월1주) ~ 선택 주차]인 업체 수(신규 제외, 진행단계별), 계약은 예상매출 합. 방문진행률 = (누계 방문+견적+계약완료) ÷ 대상 업체수.</div>
 </div>
 
 <div class="card">
   <h2>3. 결과 <span id="stat" class="ok"></span></h2>
-  <div class="row" style="margin-bottom:8px;align-items:center;gap:8px"><span style="font-size:13px;color:var(--mut)">주차</span><select id="week"></select><span style="font-size:13px;color:var(--mut);margin-left:6px" title="주간 실적 머리글에 [10/30~11/05]처럼 표시 (기본: 지난 금~목)">주간 기간</span><input type="date" id="farm-pf"><span>~</span><input type="date" id="farm-pt"><button id="run">자동 작성</button></div>
+  <div class="row" style="margin-bottom:8px;align-items:center;gap:8px"><span style="font-size:13px;color:var(--mut)">주차</span><select id="week"></select><span style="font-size:13px;color:var(--mut);margin-left:6px" title="주간 실적 머리글에 [10/30~11/05]처럼 표시 (기본: 지난 금~목)">주간 기간</span><input type="date" id="farm-pf"><span>~</span><input type="date" id="farm-pt"><span style="font-size:13px;color:var(--mut);margin-left:6px" title="2차 타겟 누계실적 = 리스트에서 최종방문 주차가 이 주차부터 선택 주차까지인 업체 (진행단계별)">누계 시작</span><input id="farm-cs" value="11월1주" style="width:70px"><button id="run">자동 작성</button></div>
   <div class="row" style="margin-bottom:6px;align-items:center">
     <span style="display:inline-flex;gap:8px;align-items:center;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:4px 10px;background:#f7f9fc"><b style="color:var(--navy)">주요업체 선정 기준</b>
       <label>계약 최대 <input type="number" id="capC" value="3" style="width:46px"></label>
@@ -329,7 +329,12 @@ function run(){
   const cur=recs.filter(x=>x.visit===week);
   const wk={},cm={};REG.forEach(r=>{wk[r]={방문:0,견적:0,계약:0,amt:0}});
   cur.filter(x=>!x.isNew).forEach(x=>{if(!x.stage)return;/* 위 2차 타겟 표는 신규 제외 (신규는 아래 신규업체 현황 표) */wk[x.region][x.stage]++;if(x.stage=='계약')wk[x.region].amt+=x.amt});
-  REG.forEach(r=>{const p=cfg.cum[r];cm[r]={방문:p[2]+wk[r].방문,견적:p[3]+wk[r].견적,계약:p[4]+wk[r].계약,amt:p[5]+wk[r].amt}});
+  /* 2차 타겟 누계실적: 11/1 리셋. 리스트에서 최종방문 주차가 [누계 시작 ~ 선택 주차]인 업체(신규 제외)를 진행단계별로 셈 */
+  const csl=(document.getElementById('farm-cs').value||'').trim();const wo=t=>{const m=String(t||'').match(/(\d+)\s*월\s*(\d+)\s*주/);return m?[+m[1],+m[2]]:null};const cs=wo(csl);
+  const ord=t=>{const w=wo(t);if(!w)return null;let v=w[0]*10+w[1];if(cs&&w[0]<cs[0]&&cs[0]-w[0]>6)v+=120;return v};const lo=cs?ord(csl):-1,hi=ord(week);let cmN=0;
+  REG.forEach(r=>{cm[r]={방문:0,견적:0,계약:0,amt:0}});
+  recs.filter(x=>!x.isNew&&x.stage).forEach(x=>{const o=ord(x.visit);if(o==null||o<lo||(hi!=null&&o>hi))return;const t=cm[x.region];t[x.stage]++;if(x.stage==='계약')t.amt+=x.amt;cmN++});
+  document.getElementById('detect').innerHTML+=' · 누계: '+(cs?csl:'시작 주차 인식 못함')+' ~ '+(week||'')+' '+cmN+'업체';
   const cap={계약:cfg.capC,견적:cfg.capQ,방문:cfg.capV};const major=[];
   ['계약','견적','방문'].forEach(s=>{major.push(...cur.filter(x=>x.stage===s&&x.amt>=cfg.minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s]))});
   /* 금주 주요업체 순서: 계약 → 견적 → 방문, 같은 단계 안에서는 예상매출 큰 순 (신규 여부와 무관) */const SO={계약:0,견적:1,방문:2};major.sort((a,b)=>(SO[a.stage]-SO[b.stage])||(b.amt-a.amt));
@@ -343,6 +348,7 @@ function run(){
   document.getElementById('stat').textContent='작성 완료 ('+week+', 금주 '+cur.length+'건'+(newN?'(신규 '+cur.filter(x=>x.isNew).length+'건은 신규업체 표로)':'')+', 주요업체 '+major.length+'건) · 신규업체 '+newN+'곳'+(c.gubun<0?' (구분 머리글 없음: 행 안의 "신규" 칸으로 판별)':'');
 }
 document.getElementById('run').onclick=run;
+(function(){const e=document.getElementById('farm-cs');try{const v=localStorage.getItem('kpp-farm-cs');if(v)e.value=v}catch(_){}e.addEventListener('change',()=>{try{localStorage.setItem('kpp-farm-cs',e.value.trim())}catch(_){}if(document.getElementById('src').value.trim())run()})})();
 document.getElementById('week').onchange=()=>{if(document.getElementById('src').value.trim())run()};
 
 /* ===== 표 생성 (17열 A~Q 고정, 병합 위치까지 계산) ===== */
