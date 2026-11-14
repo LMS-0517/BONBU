@@ -321,9 +321,15 @@ function run(){
   const recs=rows.map(r=>({isNew:isNewRow(r),comp:c.comp>=0?num(r[c.comp]):0,region:reg(r[c.region]),branch:(r[c.branch]||'').trim(),person:(r[c.person]||'').trim(),code:(r[c.code]||'').trim(),name:(r[c.name]||'').trim(),visit:(r[c.visit]||'').trim(),stage:stage(r[c.stage]),amt:num(r[c.amt]),memo:(r[c.memo]||'').trim()})).filter(x=>x.region);
   const weeks={};recs.forEach(x=>{if(x.visit)weeks[x.visit]=(weeks[x.visit]||0)+1});
   const wsel=document.getElementById('week');const prev=wsel.value;
-  const wlist=Object.keys(weeks).sort((a,b)=>weeks[b]-weeks[a]);
+  /* 주차 목록: 최근 주차가 위. 기본 선택 = 주간 기간 끝날(목)의 주차(예: 11/12 → 11월2주), 없으면 가장 최근 주차. 직접 고르면 그대로 둠 */
+  const wkn=t=>String(t||'').replace(/\s+/g,'');const nowM=new Date().getMonth()+1;
+  const wOrd=t=>{const m=String(t||'').match(/(\d+)\s*월\s*(\d+)\s*주/);if(!m)return -1e9;let v=+m[1]*10+(+m[2]);if(+m[1]>nowM+1)v-=120;return v};
+  const wlist=Object.keys(weeks).sort((a,b)=>(wOrd(b)-wOrd(a))||(weeks[b]-weeks[a]));
   wsel.innerHTML=wlist.map(w=>'<option>'+w+'</option>').join('');
-  if(wlist.includes(prev))wsel.value=prev;
+  const pt=document.getElementById('farm-pt').value;let want='';if(pt){const d=new Date(pt+'T00:00');want=(d.getMonth()+1)+'월'+Math.ceil(d.getDate()/7)+'주'}
+  const byPer=wlist.find(w=>wkn(w)===want);
+  if(wsel._manual&&wlist.includes(prev))wsel.value=prev;else wsel.value=byPer||wlist[0]||'';
+  const weekWarn=(want&&!byPer)?' <b style="color:#c00000">⚠ 주간 기간 끝날('+pt.slice(5).replace('-','/')+')의 주차 '+want+'가 리스트 최종방문에 없습니다</b>':'';
   const week=wsel.value||'';
   document.getElementById('detect').innerHTML='인식: 데이터 '+recs.length+'행, 헤더 '+(hdrHit>=3?'감지됨':'없음(기본 열 위치 적용)')+' · 열 위치(0부터): 권역 '+c.region+', 지점 '+c.branch+', 담당자 '+c.person+', 코드 '+c.code+', 업체명 '+c.name+', 최종방문 '+c.visit+', 진행단계 '+c.stage+', 예상매출 '+c.amt+', 진행사항 '+c.memo;
   const cur=recs.filter(x=>x.visit===week);
@@ -334,7 +340,7 @@ function run(){
   const ord=t=>{const w=wo(t);if(!w)return null;let v=w[0]*10+w[1];if(cs&&w[0]<cs[0]&&cs[0]-w[0]>6)v+=120;return v};const lo=cs?ord(csl):-1,hi=ord(week);let cmN=0;
   REG.forEach(r=>{cm[r]={방문:0,견적:0,계약:0,amt:0}});
   recs.filter(x=>!x.isNew&&x.stage).forEach(x=>{const o=ord(x.visit);if(o==null||o<lo||(hi!=null&&o>hi))return;const t=cm[x.region];t[x.stage]++;if(x.stage==='계약')t.amt+=x.amt;cmN++});
-  document.getElementById('detect').innerHTML+=' · 누계: '+(cs?csl:'시작 주차 인식 못함')+' ~ '+(week||'')+' '+cmN+'업체';
+  document.getElementById('detect').innerHTML+=weekWarn+' · 누계: '+(cs?csl:'시작 주차 인식 못함')+' ~ '+(week||'')+' '+cmN+'업체'+((hi!=null&&lo!=null&&hi<lo)?' <b style="color:#c00000">⚠ 선택 주차('+week+')가 누계 시작('+csl+')보다 앞이라 누계가 비어 있습니다. 주차를 확인하세요</b>':'');
   const cap={계약:cfg.capC,견적:cfg.capQ,방문:cfg.capV};const major=[];
   ['계약','견적','방문'].forEach(s=>{major.push(...cur.filter(x=>x.stage===s&&x.amt>=cfg.minAmt).sort((a,b)=>b.amt-a.amt).slice(0,cap[s]))});
   /* 금주 주요업체 순서: 계약 → 견적 → 방문, 같은 단계 안에서는 예상매출 큰 순 (신규 여부와 무관) */const SO={계약:0,견적:1,방문:2};major.sort((a,b)=>(SO[a.stage]-SO[b.stage])||(b.amt-a.amt));
@@ -349,7 +355,7 @@ function run(){
 }
 document.getElementById('run').onclick=run;
 (function(){const e=document.getElementById('farm-cs');try{const v=localStorage.getItem('kpp-farm-cs');if(v)e.value=v}catch(_){}e.addEventListener('change',()=>{try{localStorage.setItem('kpp-farm-cs',e.value.trim())}catch(_){}if(document.getElementById('src').value.trim())run()})})();
-document.getElementById('week').onchange=()=>{if(document.getElementById('src').value.trim())run()};
+document.getElementById('week').onchange=()=>{document.getElementById('week')._manual=true;if(document.getElementById('src').value.trim())run()};
 
 /* ===== 표 생성 (17열 A~Q 고정, 병합 위치까지 계산) ===== */
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
@@ -480,7 +486,7 @@ async function copyHtmlText(html,text){if(rawCopy(html,text))return true;try{awa
 async function farmCopyTable(k){if(!out){alert('먼저 자동 작성을 실행하세요');return}const F=buildGrid();const G=k==='tgt'?subGrid(F,0,F.sumEnd):subGrid(F,F.newStart,F.newEnd);const ok=await copyHtmlText(gridRichHtml(G),gridToTsv(G));document.getElementById('stat').textContent=ok?(k==='tgt'?'2차 타겟 현황':'신규업체 현황')+' 표 서식 포함 복사됨 ('+G.length+'행) → 엑셀에서 제목 칸(B열)을 선택하고 Ctrl+V (값 붙여넣기 말고 일반 붙여넣기)':'복사 실패: 미리보기를 드래그해서 복사하세요'};
 (function(){const t=new Date();const th=new Date(t);th.setDate(t.getDate()-((t.getDay()+3)%7));const fr=new Date(th);fr.setDate(th.getDate()-6);const f=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');document.getElementById('farm-pf').value=f(fr);document.getElementById('farm-pt').value=f(th)})();/* 기본: 가장 최근 목요일까지 7일(금~목), 달력으로 바꿈 */
 function farmPer(){const md=v=>v?v.slice(5,7)+'/'+v.slice(8,10):'';const a=md(document.getElementById('farm-pf').value),b=md(document.getElementById('farm-pt').value);return a||b?a+'~'+b:''}
-['farm-pf','farm-pt'].forEach(i=>document.getElementById(i).addEventListener('change',()=>{if(out)render()}));
+['farm-pf','farm-pt'].forEach(i=>document.getElementById(i).addEventListener('change',()=>{if(!out)return;/* 기간을 바꾸면 그 기간의 주차로 다시 작성 */document.getElementById('week')._manual=false;if(document.getElementById('src').value.trim())run();else render()}));
 /* 붙여넣은 리스트를 그대로 표로 (접이식), 신규 행은 연노랑 */
 /* 붙여넣은 리스트 보기: 금주(선택 주차) 변경 업체 연두, 신규 연노랑, 칸을 바로 고치고 [저장] → 1번 붙여넣기 칸에 반영해 다시 작성(금주 주요업체도 바뀜) */
 let FARM={all:null,wkOnly:false};
