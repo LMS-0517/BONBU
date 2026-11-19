@@ -110,7 +110,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 <script>try{if(!localStorage.getItem('kpp-bonbu-tg-pw'))document.getElementById('gate').style.display='flex'}catch(e){document.getElementById('gate').style.display='flex'}</script>
 <header>영남자동 V2.0 <small>영남영업본부 주간회의 자료 · 버전 V2.0 (2026-11-07)</small><span class="zoom">화면 <button id="zoomOut" title="축소">−</button><b id="zoomVal">100%</b><button id="zoomIn" title="확대">+</button><button id="zoomReset" title="100%">원래대로</button></span></header>
 <main>
-<div class="tabs"><button data-tab="sum">금주요약</button><button class="on" data-tab="farm">농산업종</button><button data-tab="tgc">경쟁사 통합 보고</button><button data-tab="price">단가인상</button><button data-tab="merge">미수금 취합</button><select id="merge" style="display:none"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></div>
+<div class="tabs"><button data-tab="sum">금주요약</button><button class="on" data-tab="farm">농산업종</button><button data-tab="tgc">경쟁사 통합 보고</button><button data-tab="mrp">경쟁사 월간보고</button><button data-tab="price">단가인상</button><button data-tab="merge">미수금 취합</button><select id="merge" style="display:none"><option value="1">병합 포함</option><option value="0">병합 없음</option></select></div>
 
 <div class="tabpane" id="pane-data">
 <div class="card">
@@ -166,6 +166,14 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 <!-- ===== 타겟업체 / 경쟁사 탭 ===== -->
 <div class="tabpane" id="pane-target"></div>
 <div class="tabpane" id="pane-comp"></div>
+<div class="tabpane" id="pane-mrp">
+<div class="card"><h2>경쟁사 통합 리스트 <span class="hint" style="margin:0">(경쟁사 통합 보고 탭과 같은 자료 · 금액구분 1,000만원 이상 BIGS·타겟업체만 사용)</span></h2><div class="hint" id="mr-src-stat"></div></div>
+<div class="card"><h2>경쟁사 실적관리 <span class="hint" style="margin:0">(경쟁사 통합 보고 탭과 같은 칸 · 붙이면 BIGS 업체의 최종방문일·견적일·계약일 갱신)</span></h2><textarea id="mr-lps" style="min-height:90px" placeholder="LPS 경쟁사 실적관리 리스트를 머리글(No. … 최종방문일자 … (계약)최종결재일자)부터 붙여넣기 (경쟁사 통합 보고 탭에 붙인 것과 같은 칸)"></textarea><div class="hint" id="mr-lps-stat"></div></div>
+<div class="card"><h2>업무일지 <span class="hint" style="margin:0">(PRG_GUBUN · DIARY_NUM · VISIT_DAT … 머리글 포함 그대로 · 타겟업체의 최종방문일로 반영)</span></h2><textarea id="mr-diary" style="min-height:90px" placeholder="업무일지 조회 결과를 머리글(PRG_GUBUN DIARY_NUM VISIT_DAT …)부터 그대로 붙여넣기"></textarea><div class="hint" id="mr-diary-stat"></div></div>
+<div class="grid"><div class="card"><h2>LPS 계약 <span class="hint" style="margin:0">(부서 · 월별 · 주차 · 기안일 · 담당자 · 코드 · 계약처명 … 최종결재일 · 결재상태)</span></h2><textarea id="mr-cont" style="min-height:90px" placeholder="LPS 계약 품의 리스트를 머리글부터 붙여넣기 → 타겟업체 계약일·효과금액, 세부사항에 계약 내용 추가"></textarea><div class="hint" id="mr-cont-stat"></div></div>
+<div class="card"><h2>LPS 견적 <span class="hint" style="margin:0">(월 · 주차 · 점유율확대 · 효과금액 · 팀/권역 · 결재상태 · 업체 · 업체명 … 최종결재일)</span></h2><textarea id="mr-quote" style="min-height:90px" placeholder="LPS 견적서 리스트를 머리글부터 붙여넣기 → 타겟업체 견적일·견적 예상매출, 세부사항에 견적 내용 추가"></textarea><div class="hint" id="mr-quote-stat"></div></div></div>
+<div class="card"><h2>▣ 월간보고 표 <span class="hint" style="margin:0">(전월 = 계약·견적·방문 / 당월 = 영업진행현황)</span></h2><div class="row" style="margin-bottom:4px;align-items:center;gap:8px"><span style="font-size:13px;color:var(--mut)">당월</span><input type="month" id="mr-month"><span class="hint" id="mr-pm" style="margin:0"></span><button class="xs" id="mr-run">월간보고 표 작성</button><span style="margin-left:auto;display:flex;gap:6px;align-items:center"><button class="xs" id="mr-xlsx">엑셀 파일로 저장</button></span></div><div class="hint" id="mr-stat" style="margin:0 0 8px"></div><div id="mr-out" style="overflow:auto"></div></div>
+</div>
 <div class="tabpane" id="pane-price"></div>
 <div class="tabpane" id="pane-sum"></div>
 <div class="tabpane" id="pane-recv" style="display:none!important">
@@ -1846,6 +1854,109 @@ document.querySelectorAll('textarea').forEach(t=>t.addEventListener('input',e=>{
     t.addEventListener('paste',()=>setTimeout(()=>{if(t.value.trim()){F.set(false);t.blur()}},50));return F}
   const all=()=>document.querySelectorAll('textarea[id]').forEach(upd);document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('textarea[id]'))setTimeout(()=>upd(e.target),0)},true);
   setInterval(all,800);all()})();
+</script>
+<script>
+/* ===== 경쟁사 월간보고: 통합 리스트(1,000만원 이상 BIGS·타겟업체) + 실적관리 + 업무일지 + LPS 계약·견적 → 전월 계약·견적·방문 / 당월 영업진행현황 ===== */
+const MR_BB='영남영업본부';const mrNs=c=>String(c??'').replace(/\s+/g,'');const mrVal=id=>document.getElementById(id).value;
+const mrIn=(d,m)=>!!m&&String(d||'').slice(0,7)===m;
+function mrPrevM(m){const [y,mo]=m.split('-').map(Number);return mo===1?(y-1)+'-12':y+'-'+String(mo-1).padStart(2,'0')}
+/* 금액구분 1,000만원 이상(억 포함), 금액구분 칸이 없으면 전체 */
+function mrBig(x){const t=mrNs(x.acls);if(!t)return true;if(/억/.test(t))return true;const m=t.match(/([\d,]+)만원/);return m?num(m[1])>=1000:false}
+/* 구분: LPS 값(01-재전환 · 02-점유율확대 · 01-신규계약 …) → 재전환 / 점유율 / 신규 */
+function mrGu(...vs){const t=vs.join(' ');return /재전환/.test(t)?'재전환':/점유율/.test(t)?'점유율':/신규/.test(t)?'신규':''}
+/* 특이사항의 예상매출(0.1억/년 · 3,000천원/년 · 300만원) → 천원 */
+function mrAmtTxt(s){const t=String(s||'');let m=t.match(/예상매출\s*([\d.,]+)\s*억/);if(m)return Math.round(num(m[1])*100000);m=t.match(/예상매출\s*([\d,]+)\s*천원/);if(m)return num(m[1]);m=t.match(/예상매출\s*([\d,]+)\s*만원/);if(m)return num(m[1])*10;return 0}
+const mrPrice=(a,b,c)=>{const v=[a,b,c].map(x=>String(x??'').trim());return v.every(x=>!x)?'':v.map(x=>x?num(x).toLocaleString():'').join('/')};
+const mrHead=(rows,must)=>rows.findIndex(r=>{const H=r.map(mrNs);return must.every(m=>H.includes(m))});
+/* LPS 견적: 머리글 이름으로 열 찾기, 결재완료만. 예상매출액(원)→천원, 단가 = 예상매출액 오른쪽 투입등급 다음 3칸(구내용/수송용/입고운반비) */
+function mrParseQuote(raw){if(!String(raw||'').trim())return null;const rows=parseTSV(raw);const hi=mrHead(rows,['업체','업체명','최종결재일']);if(hi<0)return {err:'머리글(업체 · 업체명 · 최종결재일) 행을 찾지 못했습니다',L:[]};const H=rows[hi].map(mrNs);const ix=t=>H.indexOf(t);
+  const C={code:ix('업체'),name:ix('업체명'),st:ix('결재상태'),eff:ix('효과금액'),share:ix('점유율확대'),comp:ix('경쟁사구분'),sales:ix('영업구분'),amt:ix('예상매출액'),memo:ix('계약특이사항'),date:ix('최종결재일'),emp:ix('담당자')};
+  const L=[];let skip=0;rows.slice(hi+1).forEach(r=>{const g=k=>C[k]>=0?String(r[C[k]]??'').trim():'';const code=g('code');if(!isCode6(code))return;if(C.st>=0&&g('st')&&!/결재완료/.test(g('st'))){skip++;return}
+    const memo=g('memo'),won=num(g('amt'));const a=C.amt;const amt=won>=1000?Math.round(won/1000):(num(g('eff'))||mrAmtTxt(memo));
+    L.push({kind:'견적',code,name:g('name'),date:normDate(g('date'))||'',amt,memo,price:a>=0?mrPrice(r[a+2],r[a+3],r[a+4]):'',gu:mrGu(g('share'),g('comp'),g('sales')),emp:g('emp')})});
+  return {L,skip}}
+/* LPS 계약: 머리글 이름으로, 결재완료만. 예상매출액(년)(원)→천원, 단가 = 구내용/수송용/입고운반비, 내용 = 재고차이사유 및 계약내용 + 계약특이사항 */
+function mrParseCont(raw){if(!String(raw||'').trim())return null;const rows=parseTSV(raw);const hi=mrHead(rows,['코드','계약처명','최종결재일']);if(hi<0)return {err:'머리글(코드 · 계약처명 · 최종결재일) 행을 찾지 못했습니다',L:[]};const H=rows[hi].map(mrNs);const ix=(...ts)=>{for(const t of ts){const i=H.indexOf(t);if(i>=0)return i}return -1};
+  const C={code:ix('코드'),name:ix('계약처명'),st:ix('결재상태'),amt:ix('예상매출액(년)','예상매출액'),eff:ix('효과금액(년)','효과금액'),comp:ix('경쟁사구분'),kind:ix('게약구분','계약구분'),m1:ix('재고차이사유및계약내용'),m2:ix('계약특이사항'),date:ix('최종결재일'),p1:ix('구내용단가'),p2:ix('수송용단가'),p3:ix('입고운반비'),emp:ix('담당자')};
+  const L=[];let skip=0;rows.slice(hi+1).forEach(r=>{const g=k=>C[k]>=0?String(r[C[k]]??'').trim():'';const code=g('code');if(!isCode6(code))return;if(C.st>=0&&g('st')&&!/결재완료/.test(g('st'))){skip++;return}
+    const memo=[g('m1'),g('m2')].filter(Boolean).join(' / ');const won=num(g('amt'))||num(g('eff'));const amt=won>=1000?Math.round(won/1000):mrAmtTxt(memo);
+    L.push({kind:'계약',code,name:g('name'),date:normDate(g('date'))||'',amt,memo,price:mrPrice(g('p1'),g('p2'),g('p3')),gu:mrGu(g('comp'),g('kind'))||g('kind').replace(/^\d+-/,''),emp:g('emp')})});
+  return {L,skip}}
+/* 업무일지: 머리글(VISIT_DAT · CST_COD) 아래 자료 행(첫 칸 PRG_GUBUN 값 있음)만, 세부 행(DIARY_NUM · DTL_TYP …)은 건너뜀. 업체별 가장 늦은 방문일 */
+function mrParseDiary(raw){if(!String(raw||'').trim())return null;const lines=String(raw).replace(/\r/g,'').split('\n').map(l=>l.split('\t'));let H=null,n=0;const M={};
+  lines.forEach(c=>{const ns=c.map(mrNs);if(ns.includes('VISIT_DAT')&&ns.includes('CST_COD')){H=ns;return}if(!H||!String(c[0]||'').trim())return;
+    const g=k=>String(c[H.indexOf(k)]??'').trim();const date=normDate(g('VISIT_DAT'));if(!date)return;n++;const code=g('CST_COD');if(!isCode6(code))return;const o=M[code];
+    if(!o)M[code]={date,emp:g('VISIT_EMP_NAM'),name:g('CST_NAM'),n:1};else{o.n++;if(date>o.date){o.date=date;o.emp=g('VISIT_EMP_NAM')}}});
+  return H?{M,n}:{err:'머리글(PRG_GUBUN … VISIT_DAT … CST_COD) 행을 찾지 못했습니다',M:{},n:0}}
+const mrD8=d=>{const m=String(d||'').match(/^\d{2}(\d{2})-(\d{2})-(\d{2})/);return m?m[1]+'.'+m[2]+'.'+m[3]:d};
+/* 세부사항에 덧붙이는 형식: "- 26.10.01 견적: 내용" */
+const mrLine=o=>'- '+mrD8(o.date)+' '+o.kind+': '+o.memo;
+let MR=null;
+function mrSrcStat(){const s=document.getElementById('mr-src-stat');const P=tgMerged();if(!P){s.textContent='통합 리스트 없음 · 첫 화면 암호를 넣으면 내장 리스트가 자동으로 들어옵니다 (또는 경쟁사 통합 보고 탭에 붙여넣기)';return null}
+  const B=P.rows.filter(mrBig);const nb=B.filter(x=>/BIGS/i.test(x.grp)).length;s.textContent='통합 리스트 '+P.rows.length+'업체 중 금액구분 1,000만원 이상 '+B.length+'업체 사용 (BIGS '+nb+' · 타겟업체 '+(B.length-nb)+')'+(P.lps?' · 실적관리 반영 '+P.cnt.hit+'업체':'');return P}
+function mrInStats(){const D=mrParseDiary(mrVal('mr-diary')),Q=mrParseQuote(mrVal('mr-quote')),C=mrParseCont(mrVal('mr-cont'));const P=tgMerged();const tg=new Set(P?P.rows.filter(x=>mrBig(x)&&!/BIGS/i.test(x.grp)).map(x=>x.code):[]);const all=new Set(P?P.rows.map(x=>x.code):[]);
+  const set=(id,t)=>document.getElementById(id).textContent=t;
+  set('mr-diary-stat',!D?'':D.err?'인식 실패: '+D.err:D.n+'건 인식 (업체 '+Object.keys(D.M).length+') · 1,000만원 이상 타겟업체 일치 '+Object.keys(D.M).filter(c=>tg.has(c)).length+'곳');
+  [['mr-cont-stat',C,'계약'],['mr-quote-stat',Q,'견적']].forEach(([id,X,k])=>set(id,!X?'':X.err?'인식 실패: '+X.err:X.L.length+'건 인식 (결재완료'+(X.skip?', 미완료 '+X.skip+'건 뺌':'')+') · 1,000만원 이상 타겟업체 일치 '+X.L.filter(o=>tg.has(o.code)).length+' · 통합 리스트에 없는 업체 '+X.L.filter(o=>!all.has(o.code)).length));return {D,Q,C}}
+function mrBuild(){const st=document.getElementById('mr-stat');const P=mrSrcStat();if(!P){st.textContent='경쟁사 통합 리스트가 없습니다';return}
+  const cm=mrVal('mr-month');if(!cm){st.textContent='당월을 고르세요';return}const pm=mrPrevM(cm);document.getElementById('mr-pm').textContent='전월 '+pm.replace('-','년 ')+'월';
+  const {D,Q,C}=mrInStats();const by={};[...(Q&&Q.L||[]),...(C&&C.L||[])].forEach(o=>(by[o.code]=by[o.code]||[]).push(o));Object.values(by).forEach(a=>a.sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:(x.kind==='계약')-(y.kind==='계약')));
+  const allC=new Set(P.rows.map(x=>x.code));let nV=0,nQ=0,nC=0,nM=0;
+  const rows=P.rows.filter(mrBig).map(x=>{const y={...x,vals:x.vals.slice(),memo:String(x.memo||'')};const tgt=!/BIGS/i.test(y.grp);const L=by[y.code]||[];
+    if(tgt){/* 타겟업체: 업무일지 → 최종방문일, LPS 견적·계약 → 견적일·계약일(금액 포함) */const d=D&&D.M&&D.M[y.code];if(d&&d.date>(y.visit||'')){y.visit=d.date;nV++}
+      const q=L.filter(o=>o.kind==='견적').pop();if(q&&q.date>(y.quote||'')){y.quote=q.date;if(q.amt)y.qAmt=q.amt;nQ++}const c=L.filter(o=>o.kind==='계약').pop();if(c&&c.date>(y.cont||'')){y.cont=c.date;if(c.amt)y.cAmt=c.amt;nC++}}
+    /* LPS 견적·계약 내용을 세부사항 끝에 추가 (이미 있는 내용은 건너뜀) */L.forEach(o=>{if(!o.memo||y.memo.includes(o.memo.slice(0,25)))return;y.memo=(y.memo.replace(/\s+$/,'')?y.memo.replace(/\s+$/,'')+'\n':'')+mrLine(o);nM++});
+    const last=L[L.length-1];y.gu=(last&&last.gu)||'재전환';if(!String(y.vals[5]||'').trim()&&last&&last.price)y.vals[5]=last.price;return y});
+  const amtOf=(y,k)=>P.nw?(k==='계약'?(y.cAmt||y.qAmt):k==='견적'?(y.qAmt||y.vAmt):y.vAmt)||0:(y.oAmt||0);
+  const PV={계약:[],견적:[],방문:[]};rows.forEach(y=>{const k=mrIn(y.cont,pm)?'계약':mrIn(y.quote,pm)?'견적':mrIn(y.visit,pm)?'방문':'';if(!k)return;const d=k==='계약'?y.cont:k==='견적'?y.quote:y.visit;PV[k].push([y.gu,MR_BB,y.code,y.name,...y.vals,d,amtOf(y,k),y.memo])});
+  Object.values(PV).forEach(a=>a.sort((p,q)=>(q[13]||0)-(p[13]||0)));
+  const OR={계약완료:0,견적:1,방문:2};const CU=[];rows.forEach(y=>{const k=mrIn(y.cont,cm)?'계약':mrIn(y.quote,cm)?'견적':mrIn(y.visit,cm)?'방문':'';if(!k)return;CU.push([k==='계약'?'계약완료':k,y.gu,MR_BB,y.code,y.name,...y.vals,amtOf(y,k),y.memo])});
+  /* 통합 리스트에 없는 LPS 업체: 당월 결재 계약·견적, 예상매출 1,000만원(10,000천원) 이상 → 신규 등 */const lo={};[...(C&&C.L||[]),...(Q&&Q.L||[])].forEach(o=>{if(allC.has(o.code)||!mrIn(o.date,cm)||o.amt<10000)return;const p=lo[o.code];if(!p||(p.kind==='견적'&&o.kind==='계약')||(p.kind===o.kind&&o.date>p.date))lo[o.code]=o});
+  const nLo=Object.keys(lo).length;Object.values(lo).forEach(o=>CU.push([o.kind==='계약'?'계약완료':'견적',o.gu||'신규',MR_BB,o.code,tgName(o.name),'','','','','',o.price,'','',o.amt,o.memo]));
+  CU.sort((p,q)=>(OR[p[0]]-OR[q[0]])||((q[13]||0)-(p[13]||0)));
+  MR={pm,cm,PV,CU};mrRender();
+  st.textContent='전월('+pm+') 계약 '+PV.계약.length+' · 견적 '+PV.견적.length+' · 방문 '+PV.방문.length+' / 당월('+cm+') '+CU.length+'건(통합 리스트에 없는 LPS 업체 '+nLo+') · 타겟업체 반영: 방문일 '+nV+' · 견적일 '+nQ+' · 계약일 '+nC+' · 세부사항 추가 '+nM+'건'}
+/* 표 양식: B~U 20칸 (고정 14칸 + 세부사항 6칸 병합) */
+const MR_K=[{k:'계약',t:'■ 계약',sub:['계약일','예상매출']},{k:'견적',t:'■ 견적',sub:['최종견적일','견적예상매출']},{k:'방문',t:'■ 방문',sub:['최종 방문일','예상매출']}];
+function mrSpec(k){if(k==='당월')return {cur:1,num:new Set([5,6,8,9,13]),sh:new Set([11,12]),name:4,code:3,mid:'당월'};const K=MR_K.find(x=>x.k===k);return {K,num:new Set([4,5,7,8,13]),sh:new Set([10,11]),name:3,code:2}}
+function mrTitle(k){return k==='당월'?'5. '+MR.cm.slice(0,4)+'년 '+(+MR.cm.slice(5))+'월 영업부문 영업계획':MR_K.find(x=>x.k===k).t}
+function mrHtml(k,view){const S=mrSpec(k);const rows=k==='당월'?MR.CU:MR.PV[k];const B=(view?'border:1px solid #808080;':'border:.5pt solid #A6A6A6;')+'font-family:\'맑은 고딕\';font-size:10pt;';
+  const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';const H='background:'+TG_HB+';text-align:center;vertical-align:middle;font-weight:700;';const HS=H.replace(TG_HB,TG_SB);const rs=' rowspan="2"';
+  /* 화면: 네 표 열 너비 같게 고정, 세부사항은 남는 폭 */const CW=S.cur?[78,52,92,58,150,72,72,92,70,60,96,40,40,78]:[52,92,58,150,72,72,92,70,60,96,40,40,84,78];
+  let h='<table style="border-collapse:collapse'+(view?';table-layout:fixed;width:'+(CW.reduce((x,y)=>x+y,0)+560)+'px':'')+'">'+(view?'<colgroup>'+CW.map(w=>'<col style="width:'+w+'px">').join('')+'<col span="6" style="width:'+Math.round(560/6)+'px"></colgroup>':'');
+  if(S.cur)h+='<tr><td colspan="20" style="font-family:\'맑은 고딕\';font-size:11pt;font-weight:700;background:#acb9ca;text-align:left">'+esc(mrTitle(k))+'</td></tr><tr><td colspan="20"></td></tr>';
+  else h+='<tr><td style="font-family:\'맑은 고딕\';font-size:10pt;font-weight:700;white-space:nowrap">'+esc(mrTitle(k))+'</td><td colspan="19" style="font-family:\'맑은 고딕\';font-size:10pt;text-align:right">'+(k!=='방문'?'[단위 : 천원]':'')+'</td></tr>';
+  const lead=S.cur?['영업진행현황','구분','본부','코드','거래처명']:['구분','본부','코드','거래처명'];
+  h+='<tr>'+lead.map(t=>td(t,H,rs)).join('')+td('경쟁사매출',H,' colspan="3"')+td('KPP매출',H,' colspan="3"')+td('점유율',HS,' colspan="2"')+(S.cur?td('예상매출',H,rs):td(S.K.k,H,' colspan="2"'))+td('영업 진행 세부사항',H,' colspan="6" rowspan="2"')+'</tr>';
+  h+='<tr>'+['경쟁사전체','경쟁사PPS','경쟁사단가','KPP전체','PPS','KPP단가'].map(t=>td(t,H)).join('')+['KPP','AJ'].map(t=>td(t,HS)).join('')+(S.cur?'':S.K.sub.map(t=>td(t,H)).join(''))+'</tr>';
+  const NUM="text-align:right;mso-number-format:'#\\,##0;\\-#\\,##0;\\-';";
+  rows.forEach(r=>{h+='<tr>'+r.slice(0,14).map((v,i)=>{const isNc=S.num.has(i);if(isNc)v=tgNumVal(v);const isN=typeof v==='number';const sh=S.sh.has(i)?'background:'+(view?TG_SD:TG_SB)+';':'';
+      return td(isN?(v?v.toLocaleString():(view?'-':0)):v,'text-align:'+(i===S.name?'left':isNc?'right':'center')+';vertical-align:middle;'+sh+(isN?NUM:'')+(view?'word-break:keep-all;':''),i===S.code?' x:str':'')}).join('')+td(r[14],'text-align:left;vertical-align:middle;white-space:'+(view?'pre-wrap':'normal')+';mso-data-placement:same-cell;'+(view?'min-width:360px;':''),' colspan="6"')+'</tr>'});
+  if(!rows.length)h+='<tr><td colspan="20" style="'+B+'text-align:center;color:#888">해당 업체 없음</td></tr>';return h+'</table>'}
+const MR_ORDER=['계약','견적','방문','당월'];
+function mrRender(){const o=document.getElementById('mr-out');if(!MR){o.innerHTML='';return}
+  o.innerHTML=MR_ORDER.map(k=>'<div class="row" style="margin:14px 0 4px;align-items:center;gap:8px"><b style="color:var(--navy)">'+(k==='당월'?'당월 ('+MR.cm+') 영업진행현황':'전월 ('+MR.pm+') '+k)+'</b><span class="hint" style="margin:0">'+(k==='당월'?MR.CU.length:MR.PV[k].length)+'건</span><button class="sec xs" data-mrcopy="'+k+'">표 복사 (서식 포함)</button></div>'+mrHtml(k,true)).join('');
+  o.querySelectorAll('[data-mrcopy]').forEach(b=>b.onclick=async()=>{const k=b.dataset.mrcopy;const rows=k==='당월'?MR.CU:MR.PV[k];const t=rows.map(r=>r.map(v=>String(v??'').replace(/\s*\n\s*/g,' ')).join('\t')).join('\n');const ok=await writeBoth(XLHTML(mrHtml(k,false)),t);document.getElementById('mr-stat').textContent=ok?(k==='당월'?'당월 영업진행현황':'전월 '+k)+' 표 복사됨 ('+rows.length+'행) → 엑셀 제목 칸(B열)에 붙여넣기':'복사 실패'})}
+function mrXlsx(){if(!MR)mrBuild();if(!MR)return '';const ST=xlStyles();const S=o=>ST.get(o);const rows=[],merges=[];const HB='E2EFDA',SB='B4C6E7',SD='D9E1F2';const L=i=>colL(i);
+  MR_ORDER.forEach(k=>{const Sp=mrSpec(k);const data=k==='당월'?MR.CU:MR.PV[k];const t=rows.length+1;
+    if(Sp.cur){rows.push({cells:[null,{v:mrTitle(k),s:S({b:1,sz:11,h:'left',fill:'ACB9CA'})},...Array(19).fill({v:'',s:S({fill:'ACB9CA'})})],ht:22},{cells:[]});merges.push('B'+t+':U'+t)}
+    else rows.push({cells:[null,{v:mrTitle(k),s:S({b:1,sz:10,h:'left'})},...Array(18).fill(null),k!=='방문'?{v:'[단위 : 천원]',s:S({sz:10,h:'right'})}:null],ht:20});
+    const lead=Sp.cur?['영업진행현황','구분','본부','코드','거래처명']:['구분','본부','코드','거래처명'];const n0=lead.length;
+    const top=[...lead,'경쟁사매출','','','KPP매출','','','점유율','',...(Sp.cur?['예상매출']:[Sp.K.k,'']),'영업 진행 세부사항','','','','',''];const sub=[...lead.map(()=>''),'경쟁사전체','경쟁사PPS','경쟁사단가','KPP전체','PPS','KPP단가','KPP','AJ',...(Sp.cur?['']:Sp.K.sub),'','','','','',''];
+    const hs=i=>S({b:1,sz:10,fill:Sp.sh.has(i)?SB:HB,border:'thin',wrap:1});const h1=rows.length+1,h2=h1+1;rows.push({cells:[null,...top.map((v,i)=>({v,s:hs(i)}))],ht:20},{cells:[null,...sub.map((v,i)=>({v,s:hs(i)}))],ht:20});
+    for(let c=1;c<=n0;c++)merges.push(L(c)+h1+':'+L(c)+h2);const g=n0+1;merges.push(L(g)+h1+':'+L(g+2)+h1,L(g+3)+h1+':'+L(g+5)+h1,L(g+6)+h1+':'+L(g+7)+h1);if(Sp.cur)merges.push(L(g+8)+h1+':'+L(g+8)+h2);else merges.push(L(g+8)+h1+':'+L(g+9)+h1);merges.push('P'+h1+':U'+h2);
+    const dc=i=>S({sz:10,border:'thin',wrap:1,fill:Sp.sh.has(i)?SD:undefined}),dl=S({sz:10,border:'thin',h:'left',wrap:1}),dn=S({sz:10,border:'thin',h:'right',num:1});
+    data.forEach(r=>{const rn=rows.length+1;const cells=[null];r.slice(0,14).forEach((v,i)=>{let val=v;if(i===Sp.code&&/^[1-9]\d{0,14}$/.test(String(v)))val=+v;if(Sp.num.has(i))val=tgNumVal(v);cells.push({v:val,s:Sp.num.has(i)?dn:i===Sp.name?dl:dc(i)})});cells.push({v:r[14],s:dl});while(cells.length<21)cells.push({v:'',s:dl});
+      const lines=String(r[14]||'').split('\n').reduce((a,l)=>a+Math.max(1,Math.ceil(l.length/48)),0);rows.push({cells,ht:Math.min(409,Math.max(22,lines*15))});merges.push('P'+rn+':U'+rn)});
+    rows.push({cells:[]},{cells:[]})});
+  const widths=[2,9,9,11,9,16,11,11,11,11,11,11,10,10,11,11,11,11,11,9,9];const u8=xlWorkbook([{name:'경쟁사 월간보고',xml:xlSheet(rows,merges,widths,{noGrid:true})}],ST.xml());const nm='경쟁사 월간보고_'+MR.cm.replace('-','')+'.xlsx';dlBlob(u8,nm);return nm}
+(function(){const m=document.getElementById('mr-month');const d=new Date();m.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  /* 경쟁사 실적관리는 경쟁사 통합 보고 탭과 같은 칸(서로 맞춤) */const a=document.getElementById('mr-lps'),b=document.getElementById('tg-lps');const sync=(f,t)=>()=>{if(t.value===f.value)return;t.value=f.value;t.dispatchEvent(new Event('input'))};
+  ['input','cleared'].forEach(ev=>{a.addEventListener(ev,sync(a,b));b.addEventListener(ev,sync(b,a))});a.value=b.value;
+  const ls=document.getElementById('tg-lps-stat');new MutationObserver(()=>{document.getElementById('mr-lps-stat').textContent=ls.textContent}).observe(ls,{childList:true,characterData:true,subtree:true});
+  let tmr=null;const re=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{mrInStats();if(MR)mrBuild();else mrSrcStat()},300)};['mr-diary','mr-cont','mr-quote','mr-lps'].forEach(id=>['input','cleared'].forEach(ev=>document.getElementById(id).addEventListener(ev,re)));m.addEventListener('change',()=>{if(MR)mrBuild()});
+  document.getElementById('mr-run').onclick=mrBuild;document.getElementById('mr-xlsx').onclick=()=>{const nm=mrXlsx();if(nm)document.getElementById('mr-stat').textContent='저장: '+nm};
+  document.querySelector('.tabs [data-tab="mrp"]').addEventListener('click',()=>setTimeout(()=>{mrSrcStat();mrInStats();document.getElementById('mr-pm').textContent='전월 '+mrPrevM(m.value).replace('-','년 ')+'월'},0))})();
 </script>
 </body>
 </html>
