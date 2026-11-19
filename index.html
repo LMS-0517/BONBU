@@ -1870,17 +1870,17 @@ const mrPrice=(a,b,c)=>{const v=[a,b,c].map(x=>String(x??'').trim());return v.ev
 const mrHead=(rows,must)=>rows.findIndex(r=>{const H=r.map(mrNs);return must.every(m=>H.includes(m))});
 /* LPS 견적: 머리글 이름으로 열 찾기, 결재완료만. 예상매출액(원)→천원, 단가 = 예상매출액 오른쪽 투입등급 다음 3칸(구내용/수송용/입고운반비) */
 function mrParseQuote(raw){if(!String(raw||'').trim())return null;const rows=parseTSV(raw);const hi=mrHead(rows,['업체','업체명','최종결재일']);if(hi<0)return {err:'머리글(업체 · 업체명 · 최종결재일) 행을 찾지 못했습니다',L:[]};const H=rows[hi].map(mrNs);const ix=t=>H.indexOf(t);
-  const C={code:ix('업체'),name:ix('업체명'),st:ix('결재상태'),eff:ix('효과금액'),share:ix('점유율확대'),comp:ix('경쟁사구분'),sales:ix('영업구분'),amt:ix('예상매출액'),memo:ix('계약특이사항'),date:ix('최종결재일'),emp:ix('담당자')};
+  const C={code:ix('업체'),name:ix('업체명'),st:ix('결재상태'),eff:ix('효과금액'),share:ix('점유율확대'),comp:ix('경쟁사구분'),sales:ix('영업구분'),amt:ix('예상매출액'),memo:ix('계약특이사항'),date:ix('최종결재일'),emp:ix('담당자'),reg:ix('팀/권역')};
   const L=[];let skip=0;rows.slice(hi+1).forEach(r=>{const g=k=>C[k]>=0?String(r[C[k]]??'').trim():'';const code=g('code');if(!isCode6(code))return;if(C.st>=0&&g('st')&&!/결재완료/.test(g('st'))){skip++;return}
     const memo=g('memo'),won=num(g('amt'));const a=C.amt;const amt=won>=1000?Math.round(won/1000):(num(g('eff'))||mrAmtTxt(memo));
-    L.push({kind:'견적',code,name:g('name'),date:normDate(g('date'))||'',amt,memo,price:a>=0?mrPrice(r[a+2],r[a+3],r[a+4]):'',gu:mrGu(g('share'),g('comp'),g('sales')),emp:g('emp')})});
+    L.push({kind:'견적',code,name:g('name'),date:normDate(g('date'))||'',amt,memo,price:a>=0?mrPrice(r[a+2],r[a+3],r[a+4]):'',gu:mrGu(g('share'),g('comp'),g('sales')),emp:g('emp'),reg:g('reg')})});
   return {L,skip}}
 /* LPS 계약: 머리글 이름으로, 결재완료만. 예상매출액(년)(원)→천원, 단가 = 구내용/수송용/입고운반비, 내용 = 재고차이사유 및 계약내용 + 계약특이사항 */
 function mrParseCont(raw){if(!String(raw||'').trim())return null;const rows=parseTSV(raw);const hi=mrHead(rows,['코드','계약처명','최종결재일']);if(hi<0)return {err:'머리글(코드 · 계약처명 · 최종결재일) 행을 찾지 못했습니다',L:[]};const H=rows[hi].map(mrNs);const ix=(...ts)=>{for(const t of ts){const i=H.indexOf(t);if(i>=0)return i}return -1};
-  const C={code:ix('코드'),name:ix('계약처명'),st:ix('결재상태'),amt:ix('예상매출액(년)','예상매출액'),eff:ix('효과금액(년)','효과금액'),comp:ix('경쟁사구분'),kind:ix('게약구분','계약구분'),m1:ix('재고차이사유및계약내용'),m2:ix('계약특이사항'),date:ix('최종결재일'),p1:ix('구내용단가'),p2:ix('수송용단가'),p3:ix('입고운반비'),emp:ix('담당자')};
+  const C={code:ix('코드'),name:ix('계약처명'),st:ix('결재상태'),amt:ix('예상매출액(년)','예상매출액'),eff:ix('효과금액(년)','효과금액'),comp:ix('경쟁사구분'),kind:ix('게약구분','계약구분'),m1:ix('재고차이사유및계약내용'),m2:ix('계약특이사항'),date:ix('최종결재일'),p1:ix('구내용단가'),p2:ix('수송용단가'),p3:ix('입고운반비'),emp:ix('담당자'),reg:ix('부서')};
   const L=[];let skip=0;rows.slice(hi+1).forEach(r=>{const g=k=>C[k]>=0?String(r[C[k]]??'').trim():'';const code=g('code');if(!isCode6(code))return;if(C.st>=0&&g('st')&&!/결재완료/.test(g('st'))){skip++;return}
     const memo=[g('m1'),g('m2')].filter(Boolean).join(' / ');const won=num(g('amt'))||num(g('eff'));const amt=won>=1000?Math.round(won/1000):mrAmtTxt(memo);
-    L.push({kind:'계약',code,name:g('name'),date:normDate(g('date'))||'',amt,memo,price:mrPrice(g('p1'),g('p2'),g('p3')),gu:mrGu(g('comp'),g('kind'))||g('kind').replace(/^\d+-/,''),emp:g('emp')})});
+    L.push({kind:'계약',code,name:g('name'),date:normDate(g('date'))||'',amt,memo,price:mrPrice(g('p1'),g('p2'),g('p3')),gu:mrGu(g('comp'),g('kind'))||g('kind').replace(/^\d+-/,''),emp:g('emp'),reg:g('reg')})});
   return {L,skip}}
 /* 업무일지: 머리글(VISIT_DAT · CST_COD) 아래 자료 행(첫 칸 PRG_GUBUN 값 있음)만, 세부 행(DIARY_NUM · DTL_TYP …)은 건너뜀. 업체별 가장 늦은 방문일 */
 function mrParseDiary(raw){if(!String(raw||'').trim())return null;const lines=String(raw).replace(/\r/g,'').split('\n').map(l=>l.split('\t'));let H=null,n=0;const M={};
@@ -1908,12 +1908,12 @@ function mrBuild(){const st=document.getElementById('mr-stat');const P=mrSrcStat
     /* LPS 견적·계약 내용을 세부사항 끝에 추가 (이미 있는 내용은 건너뜀) */L.forEach(o=>{if(!o.memo||y.memo.includes(o.memo.slice(0,25)))return;y.memo=(y.memo.replace(/\s+$/,'')?y.memo.replace(/\s+$/,'')+'\n':'')+mrLine(o);nM++});
     const last=L[L.length-1];y.gu=(last&&last.gu)||'재전환';if(!String(y.vals[5]||'').trim()&&last&&last.price)y.vals[5]=last.price;return y});
   const amtOf=(y,k)=>P.nw?(k==='계약'?(y.cAmt||y.qAmt):k==='견적'?(y.qAmt||y.vAmt):y.vAmt)||0:(y.oAmt||0);
-  const PV={계약:[],견적:[],방문:[]};rows.forEach(y=>{const k=mrIn(y.cont,pm)?'계약':mrIn(y.quote,pm)?'견적':mrIn(y.visit,pm)?'방문':'';if(!k)return;const d=k==='계약'?y.cont:k==='견적'?y.quote:y.visit;PV[k].push([y.gu,MR_BB,y.code,y.name,...y.vals,d,amtOf(y,k),y.memo])});
-  Object.values(PV).forEach(a=>a.sort((p,q)=>(q[13]||0)-(p[13]||0)));
-  const OR={계약완료:0,견적:1,방문:2};const CU=[];rows.forEach(y=>{const k=mrIn(y.cont,cm)?'계약':mrIn(y.quote,cm)?'견적':mrIn(y.visit,cm)?'방문':'';if(!k)return;CU.push([k==='계약'?'계약완료':k,y.gu,MR_BB,y.code,y.name,...y.vals,amtOf(y,k),y.memo])});
+  const PV={계약:[],견적:[],방문:[]};rows.forEach(y=>{const k=mrIn(y.cont,pm)?'계약':mrIn(y.quote,pm)?'견적':mrIn(y.visit,pm)?'방문':'';if(!k)return;const d=k==='계약'?y.cont:k==='견적'?y.quote:y.visit;const r=[y.gu,MR_BB,y.code,y.name,...y.vals,d,amtOf(y,k),y.memo];r._reg=y.reg;PV[k].push(r)});
+  /* 정렬: 권역(경북 → 부산 → 경남) 안에서 예상매출 큰 순 */const RO=r=>{const t=mrNs(r._reg);return /경북/.test(t)?0:/부산/.test(t)?1:/경남/.test(t)?2:3};Object.values(PV).forEach(a=>a.sort((p,q)=>(RO(p)-RO(q))||((q[13]||0)-(p[13]||0))));
+  const OR={계약완료:0,견적:1,방문:2};const CU=[];rows.forEach(y=>{const k=mrIn(y.cont,cm)?'계약':mrIn(y.quote,cm)?'견적':mrIn(y.visit,cm)?'방문':'';if(!k)return;const r=[k==='계약'?'계약완료':k,y.gu,MR_BB,y.code,y.name,...y.vals,amtOf(y,k),y.memo];r._reg=y.reg;CU.push(r)});
   /* 통합 리스트에 없는 LPS 업체: 당월 결재 계약·견적, 예상매출 1,000만원(10,000천원) 이상 → 신규 등 */const lo={};[...(C&&C.L||[]),...(Q&&Q.L||[])].forEach(o=>{if(allC.has(o.code)||!mrIn(o.date,cm)||o.amt<10000)return;const p=lo[o.code];if(!p||(p.kind==='견적'&&o.kind==='계약')||(p.kind===o.kind&&o.date>p.date))lo[o.code]=o});
-  const nLo=Object.keys(lo).length;Object.values(lo).forEach(o=>CU.push([o.kind==='계약'?'계약완료':'견적',o.gu||'신규',MR_BB,o.code,tgName(o.name),'','','','','',o.price,'','',o.amt,o.memo]));
-  CU.sort((p,q)=>(OR[p[0]]-OR[q[0]])||((q[13]||0)-(p[13]||0)));
+  const nLo=Object.keys(lo).length;Object.values(lo).forEach(o=>{const r=[o.kind==='계약'?'계약완료':'견적',o.gu||'신규',MR_BB,o.code,tgName(o.name),'','','','','',o.price,'','',o.amt,o.memo];r._reg=o.reg;CU.push(r)});
+  /* 당월: 진행현황(계약완료 → 견적 → 방문) 안에서 권역(경북 → 부산 → 경남), 그 안에서 예상매출 큰 순 */CU.sort((p,q)=>(OR[p[0]]-OR[q[0]])||(RO(p)-RO(q))||((q[13]||0)-(p[13]||0)));
   MR={pm,cm,PV,CU};mrRender();
   st.textContent='전월('+pm+') 계약 '+PV.계약.length+' · 견적 '+PV.견적.length+' · 방문 '+PV.방문.length+' / 당월('+cm+') '+CU.length+'건(통합 리스트에 없는 LPS 업체 '+nLo+') · 타겟업체 반영: 방문일 '+nV+' · 견적일 '+nQ+' · 계약일 '+nC+' · 세부사항 추가 '+nM+'건'}
 /* 표 양식: B~U 20칸 (고정 14칸 + 세부사항 6칸 병합) */
