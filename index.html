@@ -1908,11 +1908,11 @@ function mrBuild(){const st=document.getElementById('mr-stat');const P=mrSrcStat
     /* LPS 견적·계약 내용을 세부사항 끝에 추가 (이미 있는 내용은 건너뜀) */L.forEach(o=>{if(!o.memo||y.memo.includes(o.memo.slice(0,25)))return;y.memo=(y.memo.replace(/\s+$/,'')?y.memo.replace(/\s+$/,'')+'\n':'')+mrLine(o);nM++});
     const last=L[L.length-1];y.gu=(last&&last.gu)||'재전환';if(!String(y.vals[5]||'').trim()&&last&&last.price)y.vals[5]=last.price;return y});
   const amtOf=(y,k)=>P.nw?(k==='계약'?(y.cAmt||y.qAmt):k==='견적'?(y.qAmt||y.vAmt):y.vAmt)||0:(y.oAmt||0);
-  const PV={계약:[],견적:[],방문:[]};rows.forEach(y=>{const k=mrIn(y.cont,pm)?'계약':mrIn(y.quote,pm)?'견적':mrIn(y.visit,pm)?'방문':'';if(!k)return;const d=k==='계약'?y.cont:k==='견적'?y.quote:y.visit;const r=[y.gu,MR_BB,y.code,y.name,...y.vals,d,amtOf(y,k),y.memo];r._reg=y.reg;PV[k].push(r)});
+  const PV={계약:[],견적:[],방문:[]};rows.forEach(y=>{const k=mrIn(y.cont,pm)?'계약':mrIn(y.quote,pm)?'견적':mrIn(y.visit,pm)?'방문':'';if(!k)return;const d=k==='계약'?y.cont:k==='견적'?y.quote:y.visit;const r=[y.gu,y.reg||MR_BB,y.code,y.name,...y.vals,d,amtOf(y,k),y.memo];r._reg=y.reg;PV[k].push(r)});
   /* 정렬: 권역(경북 → 부산 → 경남) 안에서 예상매출 큰 순 */const RO=r=>{const t=mrNs(r._reg);return /경북/.test(t)?0:/부산/.test(t)?1:/경남/.test(t)?2:3};Object.values(PV).forEach(a=>a.sort((p,q)=>(RO(p)-RO(q))||((q[13]||0)-(p[13]||0))));
-  const OR={계약완료:0,견적:1,방문:2};const CU=[];rows.forEach(y=>{const k=mrIn(y.cont,cm)?'계약':mrIn(y.quote,cm)?'견적':mrIn(y.visit,cm)?'방문':'';if(!k)return;const r=[k==='계약'?'계약완료':k,y.gu,MR_BB,y.code,y.name,...y.vals,amtOf(y,k),y.memo];r._reg=y.reg;CU.push(r)});
+  const OR={계약완료:0,견적:1,방문:2};const CU=[];rows.forEach(y=>{const k=mrIn(y.cont,cm)?'계약':mrIn(y.quote,cm)?'견적':mrIn(y.visit,cm)?'방문':'';if(!k)return;const r=[k==='계약'?'계약완료':k,y.gu,y.reg||MR_BB,y.code,y.name,...y.vals,amtOf(y,k),y.memo];r._reg=y.reg;CU.push(r)});
   /* 통합 리스트에 없는 LPS 업체: 당월 결재 계약·견적, 예상매출 1,000만원(10,000천원) 이상 → 신규 등 */const lo={};[...(C&&C.L||[]),...(Q&&Q.L||[])].forEach(o=>{if(allC.has(o.code)||!mrIn(o.date,cm)||o.amt<10000)return;const p=lo[o.code];if(!p||(p.kind==='견적'&&o.kind==='계약')||(p.kind===o.kind&&o.date>p.date))lo[o.code]=o});
-  const nLo=Object.keys(lo).length;Object.values(lo).forEach(o=>{const r=[o.kind==='계약'?'계약완료':'견적',o.gu||'신규',MR_BB,o.code,tgName(o.name),'','','','','',o.price,'','',o.amt,o.memo];r._reg=o.reg;CU.push(r)});
+  const nLo=Object.keys(lo).length;Object.values(lo).forEach(o=>{const r=[o.kind==='계약'?'계약완료':'견적',o.gu||'신규',o.reg||MR_BB,o.code,tgName(o.name),'','','','','',o.price,'','',o.amt,o.memo];r._reg=o.reg;CU.push(r)});
   /* 당월: 진행현황(계약완료 → 견적 → 방문) 안에서 권역(경북 → 부산 → 경남), 그 안에서 예상매출 큰 순 */CU.sort((p,q)=>(OR[p[0]]-OR[q[0]])||(RO(p)-RO(q))||((q[13]||0)-(p[13]||0)));
   /* 1000만원 이상 영업 누계 현황 · 계: BIGS + 타겟업체(중복 표시 업체 제외), 당월 연도 안의 계약 > 견적 > 방문 중 가장 높은 단계 하나, 금액 = 그 단계 예상매출 */
   const hr=P.raw.find(r=>r.some(c=>mrNs(c)==='중복'));const di=hr?hr.findIndex(c=>mrNs(c)==='중복'):-1;const yr=cm.slice(0,4);const inY=d=>String(d||'').slice(0,4)===yr;
@@ -1931,7 +1931,7 @@ function mrHtml(k,view){const S=mrSpec(k);const rows=k==='당월'?MR.CU:MR.PV[k]
   let h='<table style="border-collapse:collapse'+(view?';table-layout:fixed;width:'+(CW.reduce((x,y)=>x+y,0)+560)+'px':'')+'">'+(view?'<colgroup>'+CW.map(w=>'<col style="width:'+w+'px">').join('')+'<col span="6" style="width:'+Math.round(560/6)+'px"></colgroup>':'');
   if(S.cur)h+='<tr><td colspan="20" style="font-family:\'맑은 고딕\';font-size:11pt;font-weight:700;background:#acb9ca;text-align:left">'+esc(mrTitle(k))+'</td></tr><tr><td colspan="20"></td></tr>';
   else h+='<tr><td style="font-family:\'맑은 고딕\';font-size:10pt;font-weight:700;white-space:nowrap">'+esc(mrTitle(k))+'</td><td colspan="19" style="font-family:\'맑은 고딕\';font-size:10pt;text-align:right">'+(k!=='방문'?'[단위 : 천원]':'')+'</td></tr>';
-  const lead=S.cur?['영업진행현황','구분','본부','코드','거래처명']:['구분','본부','코드','거래처명'];
+  const lead=S.cur?['영업진행현황','구분','권역','코드','거래처명']:['구분','권역','코드','거래처명'];
   h+='<tr>'+lead.map(t=>td(t,H,rs)).join('')+td('경쟁사매출',H,' colspan="3"')+td('KPP매출',H,' colspan="3"')+td('점유율',HS,' colspan="2"')+(S.cur?td('예상매출',H,rs):td(S.K.k,H,' colspan="2"'))+td('영업 진행 세부사항',H,' colspan="6" rowspan="2"')+'</tr>';
   h+='<tr>'+['경쟁사전체','경쟁사PPS','경쟁사단가','KPP전체','PPS','KPP단가'].map(t=>td(t,H)).join('')+['KPP','AJ'].map(t=>td(t,HS)).join('')+(S.cur?'':S.K.sub.map(t=>td(t,H)).join(''))+'</tr>';
   const NUM="text-align:right;mso-number-format:'#\\,##0;\\-#\\,##0;\\-';";
@@ -1958,7 +1958,7 @@ function mrXlsx(){if(!MR)mrBuild();if(!MR)return '';const ST=xlStyles();const S=
   MR_ORDER.forEach(k=>{const Sp=mrSpec(k);const data=k==='당월'?MR.CU:MR.PV[k];const t=rows.length+1;
     if(Sp.cur){rows.push({cells:[null,{v:mrTitle(k),s:S({b:1,sz:11,h:'left',fill:'ACB9CA'})},...Array(19).fill({v:'',s:S({fill:'ACB9CA'})})],ht:22},{cells:[]});merges.push('B'+t+':U'+t)}
     else rows.push({cells:[null,{v:mrTitle(k),s:S({b:1,sz:10,h:'left'})},...Array(18).fill(null),k!=='방문'?{v:'[단위 : 천원]',s:S({sz:10,h:'right'})}:null],ht:20});
-    const lead=Sp.cur?['영업진행현황','구분','본부','코드','거래처명']:['구분','본부','코드','거래처명'];const n0=lead.length;
+    const lead=Sp.cur?['영업진행현황','구분','권역','코드','거래처명']:['구분','권역','코드','거래처명'];const n0=lead.length;
     const top=[...lead,'경쟁사매출','','','KPP매출','','','점유율','',...(Sp.cur?['예상매출']:[Sp.K.k,'']),'영업 진행 세부사항','','','','',''];const sub=[...lead.map(()=>''),'경쟁사전체','경쟁사PPS','경쟁사단가','KPP전체','PPS','KPP단가','KPP','AJ',...(Sp.cur?['']:Sp.K.sub),'','','','','',''];
     const hs=i=>S({b:1,sz:9,fill:Sp.sh.has(i)?SB:HB,border:'thinG',wrap:1});const h1=rows.length+1,h2=h1+1;rows.push({cells:[null,...top.map((v,i)=>({v,s:hs(i)}))],ht:20},{cells:[null,...sub.map((v,i)=>({v,s:hs(i)}))],ht:20});
     for(let c=1;c<=n0;c++)merges.push(L(c)+h1+':'+L(c)+h2);const g=n0+1;merges.push(L(g)+h1+':'+L(g+2)+h1,L(g+3)+h1+':'+L(g+5)+h1,L(g+6)+h1+':'+L(g+7)+h1);if(Sp.cur)merges.push(L(g+8)+h1+':'+L(g+8)+h2);else merges.push(L(g+8)+h1+':'+L(g+9)+h1);merges.push('P'+h1+':U'+h2);
