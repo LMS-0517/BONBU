@@ -1956,6 +1956,8 @@ function mrXlsx(){if(!MR)mrBuild();if(!MR)return '';const ST=xlStyles();const S=
   const ls=document.getElementById('tg-lps-stat');new MutationObserver(()=>{document.getElementById('mr-lps-stat').textContent=ls.textContent}).observe(ls,{childList:true,characterData:true,subtree:true});
   let tmr=null;const re=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{mrInStats();if(MR)mrBuild();else mrSrcStat()},300)};['mr-diary','mr-cont','mr-quote','mr-lps'].forEach(id=>['input','cleared'].forEach(ev=>document.getElementById(id).addEventListener(ev,re)));m.addEventListener('change',()=>{if(MR)mrBuild()});
   document.getElementById('mr-run').onclick=mrBuild;document.getElementById('mr-xlsx').onclick=()=>{const nm=mrXlsx();if(nm)document.getElementById('mr-stat').textContent='저장: '+nm};
+  /* 세부리스트(통합 리스트 + 실적관리 반영) 카드: 경쟁사 통합 보고 / 월간보고 중 연 탭 맨 아래로 옮겨 같이 씀 */const tgL=document.getElementById('tg-list').closest('.card');
+  [['mrp','pane-mrp'],['tgc','pane-tgc']].forEach(([t,pid])=>document.querySelector('.tabs [data-tab="'+t+'"]').addEventListener('click',()=>document.getElementById(pid).appendChild(tgL)));
   document.querySelector('.tabs [data-tab="mrp"]').addEventListener('click',()=>setTimeout(()=>{mrSrcStat();mrInStats();document.getElementById('mr-pm').textContent='전월 '+mrPrevM(m.value).replace('-','년 ')+'월'},0))})();
 </script>
 </body>
