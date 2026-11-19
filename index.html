@@ -1914,7 +1914,12 @@ function mrBuild(){const st=document.getElementById('mr-stat');const P=mrSrcStat
   /* 통합 리스트에 없는 LPS 업체: 당월 결재 계약·견적, 예상매출 1,000만원(10,000천원) 이상 → 신규 등 */const lo={};[...(C&&C.L||[]),...(Q&&Q.L||[])].forEach(o=>{if(allC.has(o.code)||!mrIn(o.date,cm)||o.amt<10000)return;const p=lo[o.code];if(!p||(p.kind==='견적'&&o.kind==='계약')||(p.kind===o.kind&&o.date>p.date))lo[o.code]=o});
   const nLo=Object.keys(lo).length;Object.values(lo).forEach(o=>{const r=[o.kind==='계약'?'계약완료':'견적',o.gu||'신규',MR_BB,o.code,tgName(o.name),'','','','','',o.price,'','',o.amt,o.memo];r._reg=o.reg;CU.push(r)});
   /* 당월: 진행현황(계약완료 → 견적 → 방문) 안에서 권역(경북 → 부산 → 경남), 그 안에서 예상매출 큰 순 */CU.sort((p,q)=>(OR[p[0]]-OR[q[0]])||(RO(p)-RO(q))||((q[13]||0)-(p[13]||0)));
-  MR={pm,cm,PV,CU};mrRender();
+  /* 1000만원 이상 영업 누계 현황 · 계: BIGS + 타겟업체(중복 표시 업체 제외), 당월 연도 안의 계약 > 견적 > 방문 중 가장 높은 단계 하나, 금액 = 그 단계 예상매출 */
+  const hr=P.raw.find(r=>r.some(c=>mrNs(c)==='중복'));const di=hr?hr.findIndex(c=>mrNs(c)==='중복'):-1;const yr=cm.slice(0,4);const inY=d=>String(d||'').slice(0,4)===yr;
+  const SUM={};['경북권역','부산권역','경남권역'].forEach(g=>SUM[g]={n:0,s:0,방문:[0,0],견적:[0,0],계약:[0,0]});let nDup=0;
+  rows.forEach(y=>{if(di>=0&&/중복/.test(String((P.raw[y.ri]||[])[di]||''))){nDup++;return}const g=Object.keys(SUM).find(k=>mrNs(y.reg).startsWith(k.slice(0,2)));if(!g)return;const o=SUM[g];o.n++;o.s+=num(y.vals[0])||(y.vAmt||0);
+    const k=inY(y.cont)?'계약':inY(y.quote)?'견적':inY(y.visit)?'방문':'';if(k){o[k][0]++;o[k][1]+=amtOf(y,k)}});
+  MR={pm,cm,PV,CU,SUM,nDup};mrRender();
   st.textContent='전월('+pm+') 계약 '+PV.계약.length+' · 견적 '+PV.견적.length+' · 방문 '+PV.방문.length+' / 당월('+cm+') '+CU.length+'건(통합 리스트에 없는 LPS 업체 '+nLo+') · 타겟업체 반영: 방문일 '+nV+' · 견적일 '+nQ+' · 계약일 '+nC+' · 세부사항 추가 '+nM+'건'}
 /* 표 양식: B~U 20칸 (고정 14칸 + 세부사항 6칸 병합) */
 const MR_K=[{k:'계약',t:'■ 계약',sub:['계약일','예상매출']},{k:'견적',t:'■ 견적',sub:['최종견적일','견적예상매출']},{k:'방문',t:'■ 방문',sub:['최종 방문일','예상매출']}];
@@ -1933,9 +1938,21 @@ function mrHtml(k,view){const S=mrSpec(k);const rows=k==='당월'?MR.CU:MR.PV[k]
   rows.forEach(r=>{h+='<tr>'+r.slice(0,14).map((v,i)=>{const isNc=S.num.has(i);if(isNc)v=tgNumVal(v);const isN=typeof v==='number';const sh=S.sh.has(i)?'background:'+TG_SD+';':'';
       return td(isN?(v?v.toLocaleString():(view?'-':0)):v,'text-align:'+(i===S.name?'left':isNc?'right':'center')+';vertical-align:middle;'+sh+(isN?NUM:'')+(view?'word-break:keep-all;':''),i===S.code?' x:str':'')}).join('')+td(r[14],'text-align:left;vertical-align:middle;white-space:'+(view?'pre-wrap':'normal')+';mso-data-placement:same-cell;'+(view?'min-width:360px;':''),' colspan="6"')+'</tr>'});
   if(!rows.length)h+='<tr><td colspan="20" style="'+B+'text-align:center;color:#888">해당 업체 없음</td></tr>';return h+'</table>'}
+/* 누계 현황 · 계 표 (B~M 12칸) */
+function mrSumHtml(view){const S=MR.SUM;const B=(view?'border:1px solid #808080;':'border:.5pt solid #BFBFBF;')+'font-family:\'맑은 고딕\';font-size:9pt;';const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';
+  const H='background:#e2efda;text-align:center;vertical-align:middle;font-weight:700;';const HT='background:#fff2cc;text-align:center;vertical-align:middle;font-weight:700;';const NUM="text-align:right;mso-number-format:'#\\,##0;\\-#\\,##0;\\-';";const PCT="text-align:right;mso-number-format:'0\\.0%';";const RL='border-left:1.5pt solid #c00000;',RR='border-right:1.5pt solid #c00000;';
+  const T={n:0,s:0,방문:[0,0],견적:[0,0],계약:[0,0]};Object.values(S).forEach(o=>{T.n+=o.n;T.s+=o.s;['방문','견적','계약'].forEach(k=>{T[k][0]+=o[k][0];T[k][1]+=o[k][1]})});
+  let h='<table style="border-collapse:collapse">';h+='<tr><td colspan="2" style="font-family:\'맑은 고딕\';font-size:10pt;font-weight:700;white-space:nowrap">▣ 1000만원 이상 영업 누계 현황</td><td colspan="10" style="font-family:\'맑은 고딕\';font-size:10pt;text-align:right">[단위 : 천원]</td></tr>';
+  h+='<tr>'+td('계',H,' colspan="2" rowspan="2"')+td('전체 타겟업체',HT+RL+RR+'border-top:1.5pt solid #c00000;',' colspan="2"')+['방문','견적','계약','진행단계 계'].map(t=>td(t,H,' colspan="2"')).join('')+'</tr>';
+  h+='<tr>'+td('업체수',HT+RL)+td('경쟁사매출',HT+RR)+['방문','견적','계약'].map(()=>td('업체수',H)+td('금액',H)).join('')+td('업체수',H)+td('진행율',H)+'</tr>';
+  const fmt=v=>view?(v?v.toLocaleString():'-'):v;const line=(nm,o,sum)=>{const done=o.방문[0]+o.견적[0]+o.계약[0];const bg=sum?'background:#d9e1f2;font-weight:700;':'';const ln=sum?'border-bottom:1.5pt solid #c00000;':'';
+    return '<tr>'+td(nm,'text-align:center;font-weight:700;'+bg,' colspan="2"')+td(fmt(o.n),NUM+bg+RL+ln)+td(fmt(o.s),NUM+bg+RR+ln)+['방문','견적','계약'].map(k=>td(fmt(o[k][0]),NUM+bg)+td(fmt(o[k][1]),NUM+bg)).join('')+td(fmt(done),NUM+bg)+td(view?(o.n?(done/o.n*100).toFixed(1)+'%':'-'):(o.n?done/o.n:0),PCT+bg)+'</tr>'};
+  Object.keys(S).forEach(g=>h+=line(g,S[g]));h+=line('영남영업본부',T,1);
+  h+='<tr><td colspan="12" style="font-family:\'맑은 고딕\';font-size:9pt">* 타겟업체 기준 : LPS/BIGs 중복제외 (금액구분 1,000만원 이상 BIGS·타겟업체, 통합 리스트 중복 표시 '+MR.nDup+'곳 제외) · '+MR.cm.slice(0,4)+'년 계약 &gt; 견적 &gt; 방문 중 높은 단계, 금액 = 그 단계 예상매출</td></tr>';return h+'</table>'}
 const MR_ORDER=['계약','견적','방문','당월'];
 function mrRender(){const o=document.getElementById('mr-out');if(!MR){o.innerHTML='';return}
-  o.innerHTML=MR_ORDER.map(k=>'<div class="row" style="margin:14px 0 4px;align-items:center;gap:8px"><b style="color:var(--navy)">'+(k==='당월'?'당월 ('+MR.cm+') 영업진행현황':'전월 ('+MR.pm+') '+k)+'</b><span class="hint" style="margin:0">'+(k==='당월'?MR.CU.length:MR.PV[k].length)+'건</span><button class="sec xs" data-mrcopy="'+k+'">표 복사 (서식 포함)</button></div>'+mrHtml(k,true)).join('');
+  o.innerHTML=MR_ORDER.map(k=>'<div class="row" style="margin:14px 0 4px;align-items:center;gap:8px"><b style="color:var(--navy)">'+(k==='당월'?'당월 ('+MR.cm+') 영업진행현황':'전월 ('+MR.pm+') '+k)+'</b><span class="hint" style="margin:0">'+(k==='당월'?MR.CU.length:MR.PV[k].length)+'건</span><button class="sec xs" data-mrcopy="'+k+'">표 복사 (서식 포함)</button></div>'+mrHtml(k,true)).join('')+'<div class="row" style="margin:18px 0 4px;align-items:center;gap:8px"><b style="color:var(--navy)">1000만원 이상 영업 누계 현황 · 계</b><button class="sec xs" id="mr-sumcopy">표 복사 (서식 포함)</button></div>'+mrSumHtml(true);
+  document.getElementById('mr-sumcopy').onclick=async()=>{const ok=await writeBoth(XLHTML(mrSumHtml(false)),'');document.getElementById('mr-stat').textContent=ok?'누계 현황 · 계 표 복사됨 → 엑셀 계 표의 ▣ 제목 칸(B열)에 붙여넣기':'복사 실패'};
   o.querySelectorAll('[data-mrcopy]').forEach(b=>b.onclick=async()=>{const k=b.dataset.mrcopy;const rows=k==='당월'?MR.CU:MR.PV[k];const t=rows.map(r=>r.map(v=>String(v??'').replace(/\s*\n\s*/g,' ')).join('\t')).join('\n');const ok=await writeBoth(XLHTML(mrHtml(k,false)),t);document.getElementById('mr-stat').textContent=ok?(k==='당월'?'당월 영업진행현황':'전월 '+k)+' 표 복사됨 ('+rows.length+'행) → 엑셀 제목 칸(B열)에 붙여넣기':'복사 실패'})}
 function mrXlsx(){if(!MR)mrBuild();if(!MR)return '';const ST=xlStyles();const S=o=>ST.get(o);const rows=[],merges=[];const HB='E2EFDA',SB='B4C6E7',SD='D9E1F2';const L=i=>colL(i);
   MR_ORDER.forEach(k=>{const Sp=mrSpec(k);const data=k==='당월'?MR.CU:MR.PV[k];const t=rows.length+1;
