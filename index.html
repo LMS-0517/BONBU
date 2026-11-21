@@ -208,6 +208,7 @@ td.cstart{box-shadow:inset 0 0 0 3px #d00 !important;position:relative}
 <div class="card"><h2>경쟁사 통합 리스트 <span class="hint" style="margin:0">(머리글 2줄 포함 전체 · 구분 BIGS/타겟업체 · 계약년월 있으면 계약(효과금액), 견적년월 있으면 견적(견적 예상매출), 그 외 방문)</span></h2><textarea id="tg-src" style="min-height:150px" placeholder="중복·코드·순위 · 구분, 코드, 거래처명, 권역, 지점, 담당자, 경쟁사매출(전체·PPS·단가), KPP매출(전체·PPS·단가), 점유율(KPP·AJ), 방문(최종방문일·예상매출), 견적(견적년월·예상매출), 계약(계약년월·효과금액), 영업 진행 세부사항 순서의 통합 리스트를 머리글 2줄부터 붙여넣기"></textarea><div class="hint" id="tg-src-stat"></div></div>
 <div class="card"><h2>경쟁사 실적관리 (LPS 실적관리) <span class="hint" style="margin:0">(머리글 2줄 포함 전체 · 코드로 통합 리스트에 반영: 최종방문일자→최종방문일, (견적)최종결재일자→견적년월, (견적)효과금액→견적 예상매출, (계약)최종결재일자→계약년월, (계약)효과금액→계약 효과금액)</span></h2><textarea id="tg-lps" style="min-height:120px" placeholder="LPS 경쟁사 실적관리 리스트를 머리글(No. … 최종방문일자 … (계약)최종결재일자)부터 붙여넣기"></textarea><div class="hint" id="tg-lps-stat"></div></div>
 <div class="card"><h2>▣ 계약 · 견적 · 방문업체 표</h2><div class="row" style="margin-bottom:4px;align-items:center;gap:8px"><span style="font-size:13px;color:var(--mut)">실적 선택일</span><input type="date" id="tg-from" title="시작일(금요일)을 고르면 끝 날짜는 6일 뒤(목요일)로 자동"><span>~</span><input type="date" id="tg-to"><button class="sec xs" id="tg-dclr">기간 지우기</button><span style="font-size:13px;color:var(--mut);margin-left:6px">상단 표</span><select id="tg-only"><option value="1">변경업체만</option><option value="0">전체</option></select><button class="xs" id="tg-run">계약·견적·방문 표 작성</button><span style="margin-left:auto;display:flex;gap:6px;align-items:center"><button class="xs" id="tg-save" style="background:#fde4ec;border-color:#e88aa8;color:#a3375c" title="표 칸을 눌러 직접 고친 뒤 누르면 복사·엑셀에 반영">수정 완료</button><button class="xs" id="tg-xlsx">엑셀 파일로 저장</button></span></div><div class="hint" id="tg-stat" style="margin:0 0 8px"></div><div id="tg-out" style="overflow:visible"></div></div>
+<div class="card"><h2>▣ 최종 본부 타겟 업체 주간 영업 현황</h2><div class="row" style="margin-bottom:4px;align-items:center;gap:8px"><span style="font-size:13px;color:var(--mut)">금주 = 위 실적 선택일</span><span style="font-size:13px;color:var(--mut);margin-left:8px">누계 시작</span><input type="date" id="tg-ws-from" title="누계 = 이 날짜 ~ 실적 선택일 끝 날짜"><button class="xs" id="tg-ws-run">주간 영업 현황표 생성</button><button class="sec xs" id="tg-ws-copy">표 복사 (서식 포함)</button></div><div class="hint" id="tg-ws-stat" style="margin:0 0 8px"></div><div id="tg-ws-out" style="overflow:auto"></div></div>
 <div class="card"><details id="tg-list"><summary style="cursor:pointer;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px"><span>세부리스트 (통합 리스트 + 실적관리 반영) <span id="tg-list-n" class="hint" style="margin:0"></span></span><span style="margin-left:auto;display:flex;gap:6px;align-items:center"><span id="tg-list-st" class="hint" style="margin:0"></span><span id="tg-full-stat" class="hint" style="margin:0"></span><button class="sec xs" id="tg-lwk" type="button">변경업체만</button><button class="xs" id="tg-lsave" type="button" style="background:#fde4ec;border-color:#e88aa8;color:#a3375c">저장</button><button class="xs" id="tg-full" type="button" title="세부리스트 전체를 엑셀로 (실적관리 반영 칸 연분홍)">통합 리스트 전체 엑셀 생성</button></span></summary><div id="tg-list-out" style="overflow:visible;margin-top:8px"></div></details></div>
 </div>
 <div class="tabpane" id="pane-merge">
@@ -1991,6 +1992,49 @@ function mrXlsx(){if(!MR)mrBuild();if(!MR)return '';const ST=xlStyles();const S=
   /* 세부리스트(통합 리스트 + 실적관리 반영) 카드: 경쟁사 통합 보고 / 월간보고 중 연 탭 맨 아래로 옮겨 같이 씀 */const tgL=document.getElementById('tg-list').closest('.card');
   [['mrp','pane-mrp'],['tgc','pane-tgc']].forEach(([t,pid])=>document.querySelector('.tabs [data-tab="'+t+'"]').addEventListener('click',()=>document.getElementById(pid).appendChild(tgL)));
   document.querySelector('.tabs [data-tab="mrp"]').addEventListener('click',()=>setTimeout(()=>{mrSrcStat();mrInStats();document.getElementById('mr-pm').textContent='전월 '+mrPrevM(m.value).replace('-','년 ')+'월'},0))})();
+</script>
+<script>
+/* 최종 본부 타겟 업체 주간 영업 현황: 통합 리스트(+실적관리 반영)에서 금주·누계 계산
+   본부타겟업체 = BIGS·타겟업체 전체(중복 표시 제외) 업체수·경쟁사매출(경쟁사PPS, 없으면 경쟁사전체)
+   방문·견적·계약 = 금액구분 1,000만원 이상(중복 제외), 기간 안 날짜 중 높은 단계 하나(계약 > 견적 > 방문)
+   금액: 계약 = 효과금액(없으면 견적 예상매출), 견적 = 견적 예상매출(없으면 방문 예상매출), 방문 = 방문 예상매출 */
+let TGWS=null;
+function tgWsCalc(){const P=tgMerged();if(!P)return null;const ns=c=>String(c??'').replace(/\s+/g,'');const R=P.raw,g=P.g,L=P.L;
+  const hr=R.find(r=>r.some(c=>ns(c)==='중복'));const di=hr?hr.findIndex(c=>ns(c)==='중복'):-1;
+  let ac=-1;R.slice(0,10).forEach(r=>{if(ac<0){const i=r.findIndex(c=>/금액구분/.test(ns(c)));if(i>=0)ac=i}});
+  const byRi={};P.rows.forEach(x=>byRi[x.ri]=x);const D=v=>String(v||'').replace(/\D/g,'').slice(0,8);
+  const fr=D(document.getElementById('tg-from').value);const tn=new Date();let to=D(document.getElementById('tg-to').value)||(tn.getFullYear()+String(tn.getMonth()+1).padStart(2,'0')+String(tn.getDate()).padStart(2,'0'));
+  const csEl=document.getElementById('tg-ws-from');if(!csEl.value)csEl.value=to.slice(0,4)+'-09-01';const cs=D(csEl.value);
+  const REG=['경북권역','부산권역','경남권역'];const S={};REG.forEach(k=>S[k]={n:0,s:0,w:{방문:[0,0],견적:[0,0],계약:[0,0]},c:{방문:[0,0],견적:[0,0],계약:[0,0]}});let nDup=0,n1k=0;
+  R.forEach((r,ri)=>{const gp=ns(r[g]);if(!/^(BIGS|타겟업체|타겟)$/i.test(gp))return;if(di>=0&&/중복/.test(String(r[di]||''))){nDup++;return}
+    const reg=REG.find(k=>ns(r[g+3]).startsWith(k.slice(0,2)));if(!reg)return;const o=S[reg];o.n++;o.s+=num(r[g+7])||num(r[g+6]);
+    const at=ac>=0?ns(r[ac]):'';const big=/억/.test(at)||(/만/.test(at)&&num(at)>=1000);if(!big)return;n1k++;
+    const x=byRi[ri];const f=k=>x?x[k]:k==='visit'?tgD(r[g+L.visit]):k==='quote'?tgD(r[g+L.quote]):k==='cont'?tgD(r[g+L.cont]):num(r[g+L[k]]);
+    const cD=D(f('cont')),qD=D(f('quote')),vD=D(f('visit'));const vA=f('vAmt')||0,qA=f('qAmt')||0,cA=f('cAmt')||0;
+    const put=(T,a,b)=>{if(!b)return;const inn=d=>d.length===8&&(!a||d>=a)&&d<=b;if(inn(cD)){T.계약[0]++;T.계약[1]+=cA||qA}else if(inn(qD)){T.견적[0]++;T.견적[1]+=qA||vA}else if(inn(vD)){T.방문[0]++;T.방문[1]+=vA}};
+    if(fr)put(o.w,fr,to);put(o.c,cs,to)});
+  return TGWS={S,fr,to,cs,nDup,n1k,lps:!!P.lps}}
+function tgWsHtml(view){const W=TGWS,S=W.S;const B=(view?'border:1px solid #808080;':'border:.5pt solid #BFBFBF;')+'font-family:\'맑은 고딕\';font-size:9pt;';const td=(v,st,a)=>'<td style="'+B+(st||'')+'"'+(a||'')+'>'+esc(v)+'</td>';
+  const C='text-align:center;vertical-align:middle;font-weight:700;';const HG='background:#d9d9d9;'+C,HR='background:#fce4d6;'+C,HW='background:#fff2cc;'+C,HC='background:#ededed;'+C,HP='background:#e2efda;'+C;
+  const NUM="text-align:right;mso-number-format:'#\\,##0;\\-#\\,##0;\\-';",PCT="text-align:right;mso-number-format:'0\\.0%';";const RL='border-left:1.5pt solid #c00000;',RR='border-right:1.5pt solid #c00000;',RT='border-top:1.5pt solid #c00000;',RB='border-bottom:1.5pt solid #c00000;';
+  const md=d=>d?(+d.slice(4,6))+'/'+(+d.slice(6)):'';const K=['방문','견적','계약'];const pl='font-family:\'맑은 고딕\';font-size:10pt;font-weight:700;white-space:nowrap;';
+  let h='<table style="border-collapse:collapse">';
+  h+='<tr><td colspan="18" style="'+pl+'font-size:11pt;text-decoration:underline">▣ 최종 본부 타겟 업체 주간 영업 현황</td></tr>';
+  h+='<tr><td colspan="4" style="'+pl+'">▶ 주간 현황</td><td colspan="6" style="'+pl+'">금주('+(W.fr?md(W.fr)+'~'+md(W.to):'기간 없음')+')</td><td colspan="8" style="'+pl+'">당월 누계('+W.cs.slice(2,4)+'.'+W.cs.slice(4,6)+'/'+W.cs.slice(6)+')~</td></tr>';
+  h+='<tr>'+td('구분 (0.1억이상)',HG,' colspan="2" rowspan="2"')+td('본부타겟업체',HR+RL+RR+RT,' colspan="2"')+K.map(k=>td(k,HW,' colspan="2"')).join('')+K.map(k=>td(k,HC,' colspan="2"')).join('')+td('진행단계 계',HP,' colspan="2"')+'</tr>';
+  h+='<tr>'+td('업체수',HR+RL)+td('경쟁사매출',HR+RR)+K.map(()=>td('업체수',HW)+td('금액',HW)).join('')+K.map(()=>td('업체수',HC)+td('금액',HC)).join('')+td('업체수',HP)+td('진행율',HP)+'</tr>';
+  const fmt=v=>view?(v?v.toLocaleString():'-'):v;const T={n:0,s:0,w:{},c:{}};K.forEach(k=>{T.w[k]=[0,0];T.c[k]=[0,0]});
+  Object.values(S).forEach(o=>{T.n+=o.n;T.s+=o.s;K.forEach(k=>{for(const z of ['w','c']){T[z][k][0]+=o[z][k][0];T[z][k][1]+=o[z][k][1]}})});
+  const line=(nm,o,sum)=>{const done=K.reduce((a,k)=>a+o.c[k][0],0);const bg=sum?'background:#d9e1f2;font-weight:700;':'';const tb=sum?'background:#c6e0b4;font-weight:700;'+RB:'';
+    return '<tr>'+td(nm,'text-align:center;font-weight:700;'+bg,' colspan="2"')+td(fmt(o.n),NUM+bg+tb+RL)+td(fmt(o.s),NUM+bg+tb+RR)+K.map(k=>td(fmt(o.w[k][0]),NUM+bg)+td(fmt(o.w[k][1]),NUM+bg)).join('')+K.map(k=>td(fmt(o.c[k][0]),NUM+bg)+td(fmt(o.c[k][1]),NUM+bg)).join('')+td(fmt(done),NUM+bg)+td(view?(o.n?(done/o.n*100).toFixed(1)+'%':'-'):(o.n?done/o.n:0),PCT+bg)+'</tr>'};
+  Object.keys(S).forEach(k=>h+=line(k,S[k]));h+=line('영남영업본부',T,1);
+  h+='<tr><td colspan="18" style="font-family:\'맑은 고딕\';font-size:9pt">* 본부타겟업체 = BIGS·타겟업체 전체(중복 표시 '+W.nDup+'곳 제외), 방문·견적·계약 = 금액구분 1,000만원 이상 '+W.n1k+'곳 중 기간 안 날짜의 가장 높은 단계(계약 &gt; 견적 &gt; 방문), 진행율 = 누계 업체수 ÷ 본부타겟업체 [단위 : 천원]</td></tr>';
+  return h+'</table>'}
+function tgWsRun(){const st=document.getElementById('tg-ws-stat'),o=document.getElementById('tg-ws-out');const W=tgWsCalc();if(!W){st.textContent='경쟁사 통합 리스트를 붙여넣으세요';o.innerHTML='';return}
+  o.innerHTML=tgWsHtml(true);const md=d=>(+d.slice(4,6))+'/'+(+d.slice(6));st.textContent='금주 '+(W.fr?md(W.fr)+'~'+md(W.to):'(실적 선택일 없음)')+' · 누계 '+md(W.cs)+'~'+md(W.to)+(W.lps?' · 실적관리 반영':' · 실적관리 미반영(붙이면 반영)')}
+document.getElementById('tg-ws-run').onclick=tgWsRun;
+document.getElementById('tg-ws-copy').onclick=async()=>{if(!TGWS)tgWsRun();if(!TGWS)return;const ok=await writeBoth(XLHTML(tgWsHtml(false)),'');document.getElementById('tg-ws-stat').textContent=ok?'주간 영업 현황표 복사됨 → 엑셀 ▣ 제목 칸(B열)에 붙여넣기':'복사 실패'};
+['tg-from','tg-to','tg-ws-from'].forEach(i=>document.getElementById(i).addEventListener('change',()=>{if(TGWS)tgWsRun()}));
 </script>
 </body>
 </html>
