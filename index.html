@@ -1662,7 +1662,8 @@ function tgTitle(t,k,rows){if(k!=='계약'&&k!=='견적')return t;const n=new Se
 function tgYM(d){const m=String(d||'').match(/(\d{2,4})\D+(\d{1,2})/);return m?String(m[1]).slice(-2)+'년 '+(+m[2])+'월':''}
 function tgBuild(){const src=document.getElementById('tg-src').value;const st=document.getElementById('tg-stat');if(!src.trim()){st.textContent='경쟁사 통합 리스트를 붙여넣으세요';return}
   const P=tgMerged();tgListRender(P);if(!P){st.textContent='인식 실패: 구분·코드 머리글 행이 없고, 구분(BIGS/타겟업체) 바로 오른쪽에 6자리 코드가 있는 행도 못 찾았습니다';return}let ALL=P.rows.filter(x=>!x.dup);/* 중복 업체는 표·건수에서 뺌 */
-  /* 상단 표: 세부리스트에서 변경된 업체만 (변경이 하나도 없으면 전체) */const nChg=ALL.filter(x=>x.chg).length;let chgNote='';if(document.getElementById('tg-only').value==='1'){if(nChg){ALL=ALL.filter(x=>x.chg);chgNote='변경업체 '+nChg+'곳만 · '}else chgNote='변경업체 없음 → 전체 · '}
+  /* 상단 표: 세부리스트에서 변경된 업체만 (변경이 하나도 없으면 전체) */const nChg=ALL.filter(x=>x.chg).length;let chgNote='';const hasD=!!(document.getElementById('tg-from').value||document.getElementById('tg-to').value);/* 실적 선택일이 있으면 기간 안 업체는 변경 여부와 관계없이 모두 (내장 리스트에 이미 있던 기간 안 견적·방문도 포함) */
+  if(hasD&&document.getElementById('tg-only').value==='1')chgNote='기간 안 업체 전체(변경 '+nChg+'곳 포함) · ';else if(document.getElementById('tg-only').value==='1'){if(nChg){ALL=ALL.filter(x=>x.chg);chgNote='변경업체 '+nChg+'곳만 · '}else chgNote='변경업체 없음 → 전체 · '}
   /* 실적 선택일: 계약은 계약완료일(계약년월), 견적은 최종견적일, 방문은 최종방문일이 기간 안인 행만 */const fr=document.getElementById('tg-from').value.replace(/\D/g,''),to=document.getElementById('tg-to').value.replace(/\D/g,'');let outN=0;
   if(fr||to){const dOf=x=>String(x.stage==='계약'?x.cont:x.stage==='견적'?x.quote:x.visit).replace(/\D/g,'').slice(0,8);const n0=ALL.length;ALL=ALL.filter(x=>{const d=dOf(x);return d.length===8&&(!fr||d>=fr)&&(!to||d<=to)});outN=n0-ALL.length}
   /* 예상매출 조회: 최소~최대(천원) 안인 업체만 */const aMin='',aMax='';/* 금액 조회 칸은 없앰 */let aOut=0;
